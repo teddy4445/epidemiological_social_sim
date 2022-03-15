@@ -5,7 +5,7 @@ import numpy as np
 # project imports
 from graph import Graph
 from pips.pip import PIP
-from seird_parms import SEIRDparameter
+from params import ModelParameter
 from epidemiological_state import EpidemiologicalState
 
 
@@ -78,12 +78,12 @@ class Simulator:
                     # pick other agent in random
                     pick_agent = self.graph.nodes[random.choice(other_agents)]
                     # if infected, try to infect
-                    if pick_agent.e_state == int(EpidemiologicalState.I) and random.random() < float(SEIRDparameter.beta):
+                    if pick_agent.e_state == int(EpidemiologicalState.I) and random.random() < float(ModelParameter.beta):
                         agent.set_e_state(new_e_state=EpidemiologicalState.E)
-                elif agent.e_state == EpidemiologicalState.E and agent.timer >= SEIRDparameter.phi:
+                elif agent.e_state == EpidemiologicalState.E and agent.timer >= ModelParameter.phi:
                     agent.set_e_state(new_e_state=EpidemiologicalState.I)
-                elif agent.e_state == EpidemiologicalState.I and agent.timer >= SEIRDparameter.gamma:
-                    if random.random() < SEIRDparameter.psi:
+                elif agent.e_state == EpidemiologicalState.I and agent.timer >= ModelParameter.gamma:
+                    if random.random() < ModelParameter.psi:
                         agent.set_e_state(new_e_state=EpidemiologicalState.D)
                         # if an agent die, disconnect it from the graph
                         remove_edges_epi = []
@@ -109,14 +109,32 @@ class Simulator:
             # get influence agents
             other_agents = self.graph.get_items(ids=self.graph.next_nodes_socio(id=agent.id))
             # update the current ideas
-            total_influence = sum([np.dot(agent.personality_vector, other_agents[i].personality_vector) / (np.linalg.norm(agent.personality_vector) * np.linalg.norm(other_agents[i].personality_vector)) for i in range(len(other_agents))])
-            new_ideas.append((1 - SEIRDparameter.lamda) * agent.ideas + SEIRDparameter.lamda * np.nansum(
-                [np.dot(agent.personality_vector, other_agents[i].personality_vector)
-                 / (np.linalg.norm(agent.personality_vector) * np.linalg.norm(other_agents[i].personality_vector)) * other_agents[i].ideas / total_influence
-                 for i in range(len(other_agents))], axis=0))
+            total_influence = 0
+            ideas_score = []
+            if len(other_agents) > 0:
+                for i in range(len(other_agents)):
+                    # if people are too different, the ideas of one person is causing negative reaction
+                    idea_similarity = 1 - np.dot(agent.ideas, other_agents[i].ideas) / (np.linalg.norm(agent.ideas) * np.linalg.norm(other_agents[i].ideas))
+                    personality_similarity = np.dot(agent.personality_vector, other_agents[i].personality_vector) / (np.linalg.norm(agent.personality_vector) * np.linalg.norm(other_agents[i].personality_vector))
+                    personality_similarity_reject = 1 - personality_similarity
+                    # if people we do not want to
+                    if idea_similarity < ModelParameter.ideas_reject and personality_similarity_reject < ModelParameter.personality_reject:
+                        ideas_score.append(personality_similarity * other_agents[i].ideas)
+                        total_influence += personality_similarity
+                    elif idea_similarity < ModelParameter.ideas_reject and personality_similarity_reject > ModelParameter.personality_reject:
+                        ideas_score.append(-1 * personality_similarity * other_agents[i].ideas)
+                        total_influence += personality_similarity
+                    elif idea_similarity > ModelParameter.ideas_reject and personality_similarity_reject < ModelParameter.personality_reject:
+                        ideas_score.append(-1 * personality_similarity * other_agents[i].ideas)
+                        total_influence += personality_similarity
+                    elif idea_similarity > ModelParameter.ideas_reject and personality_similarity_reject > ModelParameter.personality_reject:
+                        pass  # just to show we do not take into consideration this agent
+                new_ideas.append(agent.ideas + ModelParameter.lamda * np.nansum(ideas_score, axis=0)/total_influence)
+            else:
+                new_ideas.append(agent.ideas)
         # allocate them back only here to avoid miss compute in the previous loop
         for index, agent in enumerate(self.graph.nodes):
-            agent.ideas = new_ideas[index]
+            agent.ideas = np.asarray([min([max([val, 0]), 1]) for val in new_ideas[index]])
 
     def gather_epi_state(self):
         """

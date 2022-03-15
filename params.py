@@ -3,7 +3,7 @@
 # project imports
 
 
-class SEIRDparameter:
+class ModelParameter:
     """
     Hold the parameters values of the SEIRD model
     """
@@ -12,3 +12,5 @@ class SEIRDparameter:
     gamma = 20
     psi = 0.25
     lamda = 0.05
+    personality_reject = 0.25
+    ideas_reject = 0.25

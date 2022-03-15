@@ -36,8 +36,8 @@ class Main:
         """
         print("Main.simple_seird: running")
         sim = SimulatorGenerator.simple_random(node_count=100,
-                                               epi_edge_count=100 * 25,
-                                               socio_edge_count=100 * 25,
+                                               epi_edge_count=100 * 11,
+                                               socio_edge_count=100 * 11,
                                                max_time=150)
         sim.run()
         Plotter.basic_sim_plots(sim=sim,
