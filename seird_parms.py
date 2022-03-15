@@ -10,5 +10,5 @@ class SEIRDparameter:
     beta = 0.1
     phi = 8
     gamma = 20
-    psi = 0.02
-    lamda = 0.1
+    psi = 0.25
+    lamda = 0.05

@@ -42,7 +42,7 @@ class Graph:
         """
         Generate random graph with a given number of nodes and edges
         """
-        nodes = [Node.create_random_mostly_s(id=id) for id in range(node_count)]
+        nodes = [Node. create_random_mostly_s(id=id) for id in range(node_count)]
         epi_edges = []
         while len(epi_edges) < epi_edge_count:
             s_id = random.randint(0, node_count - 1)

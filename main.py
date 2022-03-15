@@ -36,12 +36,14 @@ class Main:
         """
         print("Main.simple_seird: running")
         sim = SimulatorGenerator.simple_random(node_count=100,
-                                               epi_edge_count=100*25,
-                                               socio_edge_count=100*25,
-                                               max_time=200)
+                                               epi_edge_count=100 * 25,
+                                               socio_edge_count=100 * 25,
+                                               max_time=150)
         sim.run()
         Plotter.basic_sim_plots(sim=sim,
-                                save_path=os.path.join(Main.RESULTS_FOLDER, "simple.png"))
+                                save_path=os.path.join(Main.RESULTS_FOLDER, "simple_epi.png"))
+        Plotter.ideas_plots(sim=sim,
+                            save_path=os.path.join(Main.RESULTS_FOLDER, "simple_ideas.png"))
 
     @staticmethod
     def io_prepare():

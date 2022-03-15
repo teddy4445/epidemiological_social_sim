@@ -68,15 +68,54 @@ class Plotter:
         data = np.asarray(sim.epi_dist)
         for epi_state in range(len(data[0])):
             plt.plot(range(len(data)),
-                     data[:, epi_state]/sim.graph.get_size(),
+                     data[:, epi_state] / sim.graph.get_size(),
                      Plotter.STYLES[epi_state],
                      color=Plotter.COLORS[epi_state],
                      label=Plotter.LABELS[epi_state],
                      markersize=4)
         plt.xlabel("Simulation step", fontsize=16)
         plt.ylabel("Epidemiological state distribution", fontsize=16)
-        plt.yticks([0.1*i for i in range(11)])
-        plt.xlim((-1, sim.max_time+1))
+        plt.yticks([0.1 * i for i in range(11)])
+        plt.xlim((-1, sim.max_time + 1))
+        plt.grid(alpha=0.2,
+                 color="black")
+        plt.legend()
+        ax = plt.gca()
+        ax.spines['right'].set_visible(False)
+        ax.spines['top'].set_visible(False)
+        plt.tight_layout()
+        plt.savefig(save_path, dpi=600)
+        plt.close()
+
+    @staticmethod
+    def ideas_plots(sim: Simulator,
+                    save_path: str):
+        """
+        Plot distribution over time of locations and epidemiological state
+        """
+        data_mean = np.asarray(sim.ideas_dist_mean)
+        data_std = np.asarray(sim.ideas_dist_std)
+        for idea_state in range(len(data_mean[0])):
+            # the line
+            plt.plot(range(len(data_mean)),
+                     data_mean[:, idea_state],
+                     Plotter.STYLES[idea_state],
+                     color=Plotter.COLORS[idea_state],
+                     label="Idea #{}".format(idea_state),
+                     markersize=4)
+            # the STD
+            plt.fill_between(
+                range(len(data_mean)),
+                data_mean[:, idea_state] - data_std[:, idea_state],
+                data_mean[:, idea_state] + data_std[:, idea_state],
+                color=Plotter.COLORS[idea_state],
+                alpha=0.2
+            )
+        plt.xlabel("Simulation step", fontsize=16)
+        plt.ylabel("Ideas state distribution", fontsize=16)
+        plt.yticks([0.1 * i for i in range(11)])
+        plt.xlim((-1, sim.max_time + 1))
+        plt.ylim((0, 1))
         plt.grid(alpha=0.2,
                  color="black")
         plt.legend()

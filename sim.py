@@ -30,6 +30,8 @@ class Simulator:
 
         # later analysis
         self.epi_dist = []
+        self.ideas_dist_mean = []
+        self.ideas_dist_std = []
 
     # logic #
 
@@ -54,6 +56,9 @@ class Simulator:
         self.pip.run(graph=self.graph)
         # recall state for later
         self.epi_dist.append(self.gather_epi_state())
+        mean, std = self.gather_ideas_state()
+        self.ideas_dist_mean.append(mean)
+        self.ideas_dist_std.append(std)
         # count this step
         self.step += 1
 
@@ -78,8 +83,21 @@ class Simulator:
                 elif agent.e_state == EpidemiologicalState.E and agent.timer >= SEIRDparameter.phi:
                     agent.set_e_state(new_e_state=EpidemiologicalState.I)
                 elif agent.e_state == EpidemiologicalState.I and agent.timer >= SEIRDparameter.gamma:
-                    agent.set_e_state(
-                        new_e_state=EpidemiologicalState.D if random.random() < SEIRDparameter.psi else EpidemiologicalState.R)
+                    if random.random() < SEIRDparameter.psi:
+                        agent.set_e_state(new_e_state=EpidemiologicalState.D)
+                        # if an agent die, disconnect it from the graph
+                        remove_edges_epi = []
+                        for edge in self.graph.epi_edges:
+                            if edge.s_id == agent.id or edge.t_id == agent.id:
+                                remove_edges_epi.append(edge)
+                        [self.graph.epi_edges.remove(edge) for edge in remove_edges_epi]
+                        remove_edges_socio = []
+                        for edge in self.graph.socio_edgee:
+                            if edge.s_id == agent.id or edge.t_id == agent.id:
+                                remove_edges_socio.append(edge)
+                        [self.graph.socio_edgee.remove(edge) for edge in remove_edges_socio]
+                    else:
+                        agent.set_e_state(new_e_state=EpidemiologicalState.R)
 
     def social(self):
         """
@@ -91,11 +109,11 @@ class Simulator:
             # get influence agents
             other_agents = self.graph.get_items(ids=self.graph.next_nodes_socio(id=agent.id))
             # update the current ideas
-            new_ideas.append(agent.ideas + SEIRDparameter.lamda * sum(
+            total_influence = sum([np.dot(agent.personality_vector, other_agents[i].personality_vector) / (np.linalg.norm(agent.personality_vector) * np.linalg.norm(other_agents[i].personality_vector)) for i in range(len(other_agents))])
+            new_ideas.append((1 - SEIRDparameter.lamda) * agent.ideas + SEIRDparameter.lamda * np.nansum(
                 [np.dot(agent.personality_vector, other_agents[i].personality_vector)
-                 / (np.linalg.norm(agent.personality_vector) * np.linalg.norm(other_agents[i].personality_vector)) * other_agents[
-                     i].ideas
-                 for i in range(len(other_agents))]))
+                 / (np.linalg.norm(agent.personality_vector) * np.linalg.norm(other_agents[i].personality_vector)) * other_agents[i].ideas / total_influence
+                 for i in range(len(other_agents))], axis=0))
         # allocate them back only here to avoid miss compute in the previous loop
         for index, agent in enumerate(self.graph.nodes):
             agent.ideas = new_ideas[index]
@@ -109,6 +127,12 @@ class Simulator:
             counters[int(agent.e_state)] += 1
         return counters
 
+    def gather_ideas_state(self):
+        """
+        add to memory the epi state
+        """
+        return np.nanmean([agent.ideas for agent in self.graph.nodes], axis=0), np.nanstd([agent.ideas for agent in self.graph.nodes], axis=0)
+
     # end - logic #
 
     # analysis #
@@ -117,7 +141,7 @@ class Simulator:
         return max([val[int(EpidemiologicalState.I)] for val in self.epi_dist])
 
     def mean_r_zero(self):
-        return np.mean([(self.epi_dist[i + 1][int(EpidemiologicalState.I)] - self.epi_dist[i][
+        return np.nanmean([(self.epi_dist[i + 1][int(EpidemiologicalState.I)] - self.epi_dist[i][
             int(EpidemiologicalState.I)]) / (self.epi_dist[i + 1][int(EpidemiologicalState.R)] - self.epi_dist[i][
             int(EpidemiologicalState.R)])
                         if (self.epi_dist[i + 1][int(EpidemiologicalState.R)] - self.epi_dist[i][
