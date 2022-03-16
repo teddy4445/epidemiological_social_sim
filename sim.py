@@ -65,8 +65,8 @@ class Simulator:
     def epidemiological(self):
         """
         Run a single SEIRD step as the epidemiological model
+        The model includes masks + social distance + vaccination
         """
-        # TODO: introduce PIPs as a function of the ideas an agent have
         for agent in self.graph.nodes:
             if not agent.is_virtual:
                 # clock tic
@@ -77,11 +77,25 @@ class Simulator:
                     other_agents = self.graph.next_nodes_epi(id=agent.id)
                     # pick other agent in random
                     pick_agent = self.graph.nodes[random.choice(other_agents)]
-                    # if infected, try to infect
-                    if pick_agent.e_state == int(EpidemiologicalState.I) and random.random() < float(ModelParameter.beta):
+                    # if infected, try to infect and record masks and social distance
+                    infect_chance = random.random()
+                    if agent.wearing_mask:
+                        infect_chance *= ModelParameter.mask_s_reduce_factor
+                    if pick_agent.wearing_mask:
+                        infect_chance *= ModelParameter.mask_i_reduce_factor
+                    if agent.social_distance:
+                        infect_chance *= ModelParameter.social_distance_reduce_factor
+                    if pick_agent.social_distance:
+                        infect_chance *= ModelParameter.social_distance_reduce_factor
+                    # check if infected
+                    if pick_agent.e_state == int(EpidemiologicalState.I) and infect_chance < float(ModelParameter.beta):
                         agent.set_e_state(new_e_state=EpidemiologicalState.E)
+                    elif agent.vaccinated:
+                        agent.set_e_state(new_e_state=EpidemiologicalState.V)
                 elif agent.e_state == EpidemiologicalState.E and agent.timer >= ModelParameter.phi:
                     agent.set_e_state(new_e_state=EpidemiologicalState.I)
+                elif agent.e_state == EpidemiologicalState.V and agent.timer >= ModelParameter.phi:
+                    agent.set_e_state(new_e_state=EpidemiologicalState.R)
                 elif agent.e_state == EpidemiologicalState.I and agent.timer >= ModelParameter.gamma:
                     if random.random() < ModelParameter.psi:
                         agent.set_e_state(new_e_state=EpidemiologicalState.D)
@@ -106,6 +120,9 @@ class Simulator:
         new_ideas = []
         # compute the new ideas vectors
         for agent in self.graph.nodes:
+            # if virtual, does not important
+            if agent.is_virtual:
+                continue
             # get influence agents
             other_agents = self.graph.get_items(ids=self.graph.next_nodes_socio(id=agent.id))
             # update the current ideas
@@ -115,7 +132,7 @@ class Simulator:
                 for i in range(len(other_agents)):
                     # if people are too different, the ideas of one person is causing negative reaction
                     idea_similarity = 1 - np.dot(agent.ideas, other_agents[i].ideas) / (np.linalg.norm(agent.ideas) * np.linalg.norm(other_agents[i].ideas))
-                    personality_similarity = np.dot(agent.personality_vector, other_agents[i].personality_vector) / (np.linalg.norm(agent.personality_vector) * np.linalg.norm(other_agents[i].personality_vector))
+                    personality_similarity = np.dot(agent.personality_vector, other_agents[i].personality_vector) / (np.linalg.norm(agent.personality_vector) * np.linalg.norm(other_agents[i].personality_vector)) if not agent.is_virtual else 1
                     personality_similarity_reject = 1 - personality_similarity
                     # if people we do not want to
                     if idea_similarity < ModelParameter.ideas_reject and personality_similarity_reject < ModelParameter.personality_reject:
@@ -134,22 +151,29 @@ class Simulator:
                 new_ideas.append(agent.ideas)
         # allocate them back only here to avoid miss compute in the previous loop
         for index, agent in enumerate(self.graph.nodes):
-            agent.ideas = np.asarray([min([max([val, 0]), 1]) for val in new_ideas[index]])
+            if not agent.is_virtual:
+                agent.ideas = np.asarray([min([max([val, 0]), 1]) for val in new_ideas[index]])
+                # check the status of the PIP of this agent
+                agent.wearing_mask = agent.ideas[0] > 0.5
+                agent.social_distance = agent.ideas[1] > 0.5
+                agent.vaccinated = agent.ideas[2] > 0.5
 
     def gather_epi_state(self):
         """
         add to memory the epi state
         """
-        counters = [0 for i in range(5)]  # TODO: change magic number to the number of states in the epi model
+        counters = [0 for i in range(EpidemiologicalState.STATE_COUNT)]
         for agent in self.graph.nodes:
-            counters[int(agent.e_state)] += 1
+            if not agent.is_virtual:
+                counters[int(agent.e_state)] += 1
         return counters
 
     def gather_ideas_state(self):
         """
         add to memory the epi state
         """
-        return np.nanmean([agent.ideas for agent in self.graph.nodes], axis=0), np.nanstd([agent.ideas for agent in self.graph.nodes], axis=0)
+        return np.nanmean([agent.ideas for agent in self.graph.nodes if not agent.is_virtual], axis=0), \
+               np.nanstd([agent.ideas for agent in self.graph.nodes if not agent.is_virtual], axis=0)
 
     # end - logic #
 

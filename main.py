@@ -28,6 +28,7 @@ class Main:
         """
         Main.io_prepare()
         Main.simple()
+        Main.simple_anti_vaccine()
 
     @staticmethod
     def simple():
@@ -44,6 +45,23 @@ class Main:
                                 save_path=os.path.join(Main.RESULTS_FOLDER, "simple_epi.png"))
         Plotter.ideas_plots(sim=sim,
                             save_path=os.path.join(Main.RESULTS_FOLDER, "simple_ideas.png"))
+
+    @staticmethod
+    def simple_anti_vaccine():
+        """
+        The simplest case - with anti vaccine influence
+        """
+        print("Main.simple_seird: running")
+        sim = SimulatorGenerator.anti_vaccine_simple_random(node_count=100,
+                                                            anti_virtual_nodes=10,
+                                                            epi_edge_count=100 * 11,
+                                                            socio_edge_count=100 * 11,
+                                                            max_time=150)
+        sim.run()
+        Plotter.basic_sim_plots(sim=sim,
+                                save_path=os.path.join(Main.RESULTS_FOLDER, "simple_anti_vaccine_epi.png"))
+        Plotter.ideas_plots(sim=sim,
+                            save_path=os.path.join(Main.RESULTS_FOLDER, "simple_anti_vaccine_ideas.png"))
 
     @staticmethod
     def io_prepare():

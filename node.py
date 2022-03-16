@@ -23,13 +23,21 @@ class Node:
                  ideas: list,
                  id: int,
                  timer: int,
-                 is_virtual: bool = False):
+                 is_virtual: bool = False,
+                 wearing_mask: bool = False,
+                 social_distance: bool = False,
+                 vaccinated: bool = False):
         self.e_state = epidimiological_state
         self.personality_vector = np.asarray(personality_vector)
         self.ideas = np.asarray(ideas)
         self.id = id
         self.timer = timer
         self.is_virtual = is_virtual
+
+        # pips
+        self.wearing_mask = wearing_mask
+        self.social_distance = social_distance
+        self.vaccinated = vaccinated
 
     @staticmethod
     def create_random(id: int):
