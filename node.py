@@ -26,7 +26,9 @@ class Node:
                  is_virtual: bool = False,
                  wearing_mask: bool = False,
                  social_distance: bool = False,
-                 vaccinated: bool = False):
+                 vaccinated: bool = False,
+                 vaccine_count: int = 0,
+                 last_vaccinated_time: int = 0):
         self.e_state = epidimiological_state
         self.personality_vector = np.asarray(personality_vector)
         self.ideas = np.asarray(ideas)
@@ -34,17 +36,26 @@ class Node:
         self.timer = timer
         self.is_virtual = is_virtual
 
+        # records
+        self.e_state_counts = [0 for _ in range(EpidemiologicalState.STATE_COUNT)]
+        self.e_state_counts[self.e_state] = 1
+
         # pips
         self.wearing_mask = wearing_mask
         self.social_distance = social_distance
         self.vaccinated = vaccinated
 
+        self.vaccine_count = vaccine_count
+        self.last_vaccinated_time = last_vaccinated_time
+
     @staticmethod
     def create_random(id: int):
         return Node(epidimiological_state=random.choice([EpidemiologicalState.S,
                                                          EpidemiologicalState.E,
-                                                         EpidemiologicalState.I,
-                                                         EpidemiologicalState.R,
+                                                         EpidemiologicalState.Is,
+                                                         EpidemiologicalState.Ia,
+                                                         EpidemiologicalState.Rf,
+                                                         EpidemiologicalState.Rp,
                                                          EpidemiologicalState.D]),
                     personality_vector=[random.random() for _ in range(Node.PERSONALITY_SIZE)],
                     ideas=[random.random() for _ in range(Node.IDEAS_SIZE)],
@@ -53,9 +64,9 @@ class Node:
 
     @staticmethod
     def create_random_mostly_s(id: int):
-        return Node(epidimiological_state=EpidemiologicalState.S if random.random() < 0.9 else EpidemiologicalState.I,
+        return Node(epidimiological_state=EpidemiologicalState.S if random.random() < 0.99 else EpidemiologicalState.Is,
                     personality_vector=[random.random() for _ in range(Node.PERSONALITY_SIZE)],
-                    ideas=[random.random() for _ in range(Node.IDEAS_SIZE)],
+                    ideas=[random.random() for i in range(Node.IDEAS_SIZE)],
                     id=id,
                     timer=0)
 
@@ -66,6 +77,9 @@ class Node:
                     new_e_state: EpidemiologicalState):
         self.e_state = new_e_state
         self.timer = 0
+
+        # record change
+        self.e_state_counts[self.e_state] += 1
 
     def __hash__(self):
         return self.id.__hash__()

@@ -6,6 +6,7 @@ import numpy as np
 from graph import Graph
 from pips.pip import PIP
 from params import ModelParameter
+from vaccine_reduction import vaccine_reduction
 from epidemiological_state import EpidemiologicalState
 
 
@@ -41,7 +42,7 @@ class Simulator:
             self.run_step()
 
             # edge case
-            if self.step > 0 and self.epi_dist[-1][int(EpidemiologicalState.I)] == 0:
+            if self.step > 0 and self.epi_dist[-1][int(EpidemiologicalState.Is)] == 0 and self.epi_dist[-1][int(EpidemiologicalState.Ia)] == 0:
                 self.epi_dist.append(self.epi_dist[-1].copy())
 
     def run_step(self):
@@ -79,25 +80,42 @@ class Simulator:
                     pick_agent = self.graph.nodes[random.choice(other_agents)]
                     # if infected, try to infect and record masks and social distance
                     infect_chance = random.random()
-                    if agent.wearing_mask:
+
+                    # ACTIVATE PIPS #
+                    # Masks PIP
+                    if pick_agent.wearing_mask and agent.wearing_mask:
+                        infect_chance *= ModelParameter.mask_si_reduce_factor
+                    elif agent.wearing_mask:
                         infect_chance *= ModelParameter.mask_s_reduce_factor
-                    if pick_agent.wearing_mask:
+                    elif pick_agent.wearing_mask:
                         infect_chance *= ModelParameter.mask_i_reduce_factor
-                    if agent.social_distance:
+
+                    # social distance PIP
+                    if agent.social_distance or pick_agent.social_distance:
                         infect_chance *= ModelParameter.social_distance_reduce_factor
-                    if pick_agent.social_distance:
-                        infect_chance *= ModelParameter.social_distance_reduce_factor
+
+                    # vaccination PIP
+                    infect_chance *= vaccine_reduction(agent=agent)
+                    # END - ACTIVATE PIPS #
+
                     # check if infected
-                    if pick_agent.e_state == int(EpidemiologicalState.I) and infect_chance < float(ModelParameter.beta):
+                    if (pick_agent.e_state == EpidemiologicalState.Is or pick_agent.e_state == EpidemiologicalState.Ia) and infect_chance < float(ModelParameter.beta):
                         agent.set_e_state(new_e_state=EpidemiologicalState.E)
-                    elif agent.vaccinated:
-                        agent.set_e_state(new_e_state=EpidemiologicalState.V)
+                    elif agent.vaccinated and agent.timer - agent.last_vaccinated_time > ModelParameter.vaccinate_delta_time:
+                        agent.vaccine_count += 1
+                        agent.last_vaccinated_time = agent.timer
+
                 elif agent.e_state == EpidemiologicalState.E and agent.timer >= ModelParameter.phi:
-                    agent.set_e_state(new_e_state=EpidemiologicalState.I)
-                elif agent.e_state == EpidemiologicalState.V and agent.timer >= ModelParameter.phi:
-                    agent.set_e_state(new_e_state=EpidemiologicalState.R)
-                elif agent.e_state == EpidemiologicalState.I and agent.timer >= ModelParameter.gamma:
-                    if random.random() < ModelParameter.psi:
+                    if random.random() < ModelParameter.eta:
+                        agent.set_e_state(new_e_state=EpidemiologicalState.Ia)
+                    else:
+                        agent.set_e_state(new_e_state=EpidemiologicalState.Is)
+
+                elif agent.e_state == EpidemiologicalState.Ia and agent.timer >= ModelParameter.gamma_a:
+                    agent.set_e_state(new_e_state=EpidemiologicalState.Rf)
+                elif agent.e_state == EpidemiologicalState.Is and agent.timer >= ModelParameter.gamma_s:
+                    chance = random.random()
+                    if ModelParameter.psi_2 < chance <= ModelParameter.psi_3:
                         agent.set_e_state(new_e_state=EpidemiologicalState.D)
                         # if an agent die, disconnect it from the graph
                         remove_edges_epi = []
@@ -106,12 +124,18 @@ class Simulator:
                                 remove_edges_epi.append(edge)
                         [self.graph.epi_edges.remove(edge) for edge in remove_edges_epi]
                         remove_edges_socio = []
-                        for edge in self.graph.socio_edgee:
+                        for edge in self.graph.socio_edges:
                             if edge.s_id == agent.id or edge.t_id == agent.id:
                                 remove_edges_socio.append(edge)
-                        [self.graph.socio_edgee.remove(edge) for edge in remove_edges_socio]
+                        [self.graph.socio_edges.remove(edge) for edge in remove_edges_socio]
+                    elif ModelParameter.psi_1 < chance <= ModelParameter.psi_2:
+                        agent.set_e_state(new_e_state=EpidemiologicalState.Rp)
                     else:
-                        agent.set_e_state(new_e_state=EpidemiologicalState.R)
+                        agent.set_e_state(new_e_state=EpidemiologicalState.Rf)
+                elif agent.e_state == EpidemiologicalState.Rf and agent.timer >= ModelParameter.chi_f:
+                    agent.set_e_state(new_e_state=EpidemiologicalState.S)
+                elif agent.e_state == EpidemiologicalState.Rp and agent.timer >= ModelParameter.chi_p:
+                    agent.set_e_state(new_e_state=EpidemiologicalState.S)
 
     def social(self):
         """

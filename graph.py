@@ -14,10 +14,10 @@ class Graph:
     def __init__(self,
                  nodes: list,
                  epi_edges: list,
-                 socio_edgee: list):
+                 socio_edges: list):
         self.nodes = nodes
         self.epi_edges = epi_edges
-        self.socio_edgee = socio_edgee
+        self.socio_edges = socio_edges
 
     def get_size(self) -> int:
         return len(self.nodes)
@@ -28,7 +28,7 @@ class Graph:
 
     def next_nodes_socio(self,
                          id: int):
-        return [edge.t_id for edge in self.socio_edgee if edge.s_id == id]
+        return [edge.t_id for edge in self.socio_edges if edge.s_id == id]
 
     def get_items(self,
                   ids: list):
@@ -57,7 +57,7 @@ class Graph:
                 socio_edges.append(Edge(s_id=s_id, t_id=t_id, w=1))
         return Graph(nodes=nodes,
                      epi_edges=epi_edges,
-                     socio_edgee=socio_edges)
+                     socio_edges=socio_edges)
 
     @staticmethod
     def fully_connected(node_count: int):
@@ -77,10 +77,10 @@ class Graph:
                     socio_edges.append(Edge(s_id=i, t_id=j, w=1))
         return Graph(nodes=nodes,
                      epi_edges=epi_edges,
-                     socio_edgee=socio_edges)
+                     socio_edges=socio_edges)
 
     def __hash__(self):
-        return (self.nodes, self.epi_edges, self.socio_edgee).__hash__()
+        return (self.nodes, self.epi_edges, self.socio_edges).__hash__()
 
     def __repr__(self):
         return self.__str__()
@@ -88,4 +88,4 @@ class Graph:
     def __str__(self):
         return "<Graph: V={}, E_e={}, E_s={}>".format(len(self.nodes),
                                                       len(self.epi_edges),
-                                                      len(self.socio_edgee))
+                                                      len(self.socio_edges))

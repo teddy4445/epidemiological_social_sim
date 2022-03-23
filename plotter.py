@@ -13,9 +13,9 @@ class Plotter:
     A class to generate graphs from the simulation's data
     """
 
-    COLORS = ["#34A853", "#FBBC05", "#EA4335", "#4285F4", "#111111", "#a83489"]
-    STYLES = ["-o", "-s", "-^", "-P", "-D", "--"]
-    LABELS = ["S", "E", "I", "R", "D", "V"]
+    COLORS = ["#34A853", "#FBBC05", "#EA4335", "#7a150d", "#4285F4", "#a83489", "#111111"]
+    STYLES = ["-o", "-s", "-^", "--^", "-P", "--P", "-D"]
+    LABELS = ["S", "E", "$I^a$", "$I^s$", "$R^f$", "$R^p$", "D"]
 
     def __init__(self):
         pass

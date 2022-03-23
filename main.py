@@ -27,15 +27,16 @@ class Main:
         Run all the experiments one after the other
         """
         Main.io_prepare()
-        Main.simple()
-        Main.simple_anti_vaccine()
+        #Main.simple()
+        #Main.simple_anti_vaccine()
+        Main.facebook_graph()
 
     @staticmethod
     def simple():
         """
         The simplest case
         """
-        print("Main.simple_seird: running")
+        print("Main.simple: running")
         sim = SimulatorGenerator.simple_random(node_count=100,
                                                epi_edge_count=100 * 11,
                                                socio_edge_count=100 * 11,
@@ -51,7 +52,7 @@ class Main:
         """
         The simplest case - with anti vaccine influence
         """
-        print("Main.simple_seird: running")
+        print("Main.simple_anti_vaccine: running")
         sim = SimulatorGenerator.anti_vaccine_simple_random(node_count=100,
                                                             anti_virtual_nodes=10,
                                                             epi_edge_count=100 * 11,
@@ -62,6 +63,20 @@ class Main:
                                 save_path=os.path.join(Main.RESULTS_FOLDER, "simple_anti_vaccine_epi.png"))
         Plotter.ideas_plots(sim=sim,
                             save_path=os.path.join(Main.RESULTS_FOLDER, "simple_anti_vaccine_ideas.png"))
+
+    @staticmethod
+    def facebook_graph():
+        """
+        Load the graph from Facebook about social networks
+        # source: https://snap.stanford.edu/data/egonets-Facebook.html
+        """
+        print("Main.facebook_graph: running")
+        sim = SimulatorGenerator.facebook(max_time=180)
+        sim.run()
+        Plotter.basic_sim_plots(sim=sim,
+                                save_path=os.path.join(Main.RESULTS_FOLDER, "facebook_graph.png"))
+        Plotter.ideas_plots(sim=sim,
+                            save_path=os.path.join(Main.RESULTS_FOLDER, "facebook_graph.png"))
 
     @staticmethod
     def io_prepare():

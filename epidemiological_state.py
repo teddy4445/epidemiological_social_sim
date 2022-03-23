@@ -10,8 +10,9 @@ class EpidemiologicalState(IntEnum):
     """
     S = 0
     E = 1
-    I = 2
-    R = 3
-    D = 4
-    V = 5
-    STATE_COUNT = 6
+    Ia = 2
+    Is = 3
+    Rp = 4
+    Rf = 5
+    D = 6
+    STATE_COUNT = 7
