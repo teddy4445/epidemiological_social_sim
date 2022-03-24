@@ -2,6 +2,7 @@
 import pickle
 import random
 import numpy as np
+from concurrent.futures import ThreadPoolExecutor
 
 # project imports
 from utils import *
@@ -16,6 +17,10 @@ class Simulator:
     """
     The main class of the project - the simulator
     """
+
+    # CONSTS #
+    WORKERS = 4
+    # END - CONSTS #
 
     def __init__(self,
                  graph: Graph,
