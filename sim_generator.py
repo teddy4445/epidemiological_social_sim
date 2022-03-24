@@ -29,11 +29,11 @@ class SimulatorGenerator:
             for line in graph_edges.readlines():
                 vals = line.strip().split(" ")
                 if len(vals) == 2:
-                    socio_edges.append(Edge(s_id=int(vals[0]),
-                                            t_id=int(vals[1]),
+                    socio_edges.append(Edge(s_id=int(vals[0])-1,
+                                            t_id=int(vals[1])-1,
                                             w=1))
         # add more physical as it happens more often than just social
-        FACEBOOK_GRAPH_NODES = 4038
+        FACEBOOK_GRAPH_NODES = 4039
         FACEBOOK_MEET_CHANCE = 0.1
         epi_edges = [edge.copy() for edge in socio_edges if random.random() < FACEBOOK_MEET_CHANCE]  # if friends in facebook we believe in 10% they will meet
         epi_end_size = round(math.sqrt(2)/FACEBOOK_MEET_CHANCE * len(epi_edges)) # we assume sqrt(2) more physical than social meetings

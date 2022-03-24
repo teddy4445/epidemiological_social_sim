@@ -1,4 +1,5 @@
 # library imports
+import pickle
 import random
 import numpy as np
 
@@ -37,13 +38,25 @@ class Simulator:
 
     # logic #
 
+    def save(self,
+             path: str):
+        with open(path, "wb") as sim_file:
+            pickle.dump(self, sim_file)
+
+    @staticmethod
+    def load(path: str):
+        with open(path, "rb") as sim_file:
+            answer = pickle.load(sim_file)
+        return answer
+
     def run(self):
         while self.step <= self.max_time:
             print("Performing step #{}".format(self.step))
             self.run_step()
 
             # edge case
-            if self.step > 0 and self.epi_dist[-1][int(EpidemiologicalState.Is)] == 0 and self.epi_dist[-1][int(EpidemiologicalState.Ia)] == 0:
+            if self.step > 0 and self.epi_dist[-1][int(EpidemiologicalState.Is)] == 0 and self.epi_dist[-1][
+                int(EpidemiologicalState.Ia)] == 0:
                 self.epi_dist.append(self.epi_dist[-1].copy())
 
     def run_step(self):
@@ -100,9 +113,12 @@ class Simulator:
                     # END - ACTIVATE PIPS #
 
                     # check if infected
-                    if (pick_agent.e_state == EpidemiologicalState.Is or pick_agent.e_state == EpidemiologicalState.Ia) and infect_chance <= float(ModelParameter.beta):
+                    if (
+                            pick_agent.e_state == EpidemiologicalState.Is or pick_agent.e_state == EpidemiologicalState.Ia) and infect_chance <= float(
+                            ModelParameter.beta):
                         agent.set_e_state(new_e_state=EpidemiologicalState.E)
-                    elif agent.vaccinated and (agent.timer - agent.last_vaccinated_time > ModelParameter.vaccinate_delta_time or agent.last_vaccinated_time == 0):
+                    elif agent.vaccinated and (
+                            agent.timer - agent.last_vaccinated_time > ModelParameter.vaccinate_delta_time or agent.last_vaccinated_time == 0):
                         agent.vaccine_count += 1
                         agent.last_vaccinated_time = agent.timer
 
@@ -157,7 +173,8 @@ class Simulator:
                 for i in range(len(other_agents)):
                     # if people are too different, the ideas of one person is causing negative reaction
                     idea_similarity = 1 - cosine_similarity_numba(agent.ideas, other_agents[i].ideas)
-                    personality_similarity = cosine_similarity_numba(agent.personality_vector, other_agents[i].personality_vector) if not agent.is_virtual else 1
+                    personality_similarity = cosine_similarity_numba(agent.personality_vector, other_agents[
+                        i].personality_vector) if not agent.is_virtual else 1
                     personality_similarity_reject = 1 - personality_similarity
                     # if people we do not want to
                     if idea_similarity < ModelParameter.ideas_reject and personality_similarity_reject < ModelParameter.personality_reject:
@@ -171,7 +188,7 @@ class Simulator:
                         total_influence += personality_similarity
                     elif idea_similarity > ModelParameter.ideas_reject and personality_similarity_reject > ModelParameter.personality_reject:
                         pass  # just to show we do not take into consideration this agent
-                new_ideas.append(agent.ideas + ModelParameter.lamda * np.sum(ideas_score, axis=0)/total_influence)
+                new_ideas.append(agent.ideas + ModelParameter.lamda * np.sum(ideas_score, axis=0) / total_influence)
             else:
                 new_ideas.append(agent.ideas)
         # allocate them back only here to avoid miss compute in the previous loop

@@ -71,7 +71,12 @@ class Main:
         # source: https://snap.stanford.edu/data/egonets-Facebook.html
         """
         print("Main.facebook_graph: running")
-        sim = SimulatorGenerator.facebook(max_time=180)
+        facebook_model = os.path.join(os.path.dirname(__file__), "results", "facebook_sim")
+        if not os.path.exists(facebook_model):
+            sim = SimulatorGenerator.facebook(max_time=180)
+            sim.save(path=facebook_model)
+        else:
+            sim = Simulator.load(path=facebook_model)
         sim.run()
         Plotter.basic_sim_plots(sim=sim,
                                 save_path=os.path.join(Main.RESULTS_FOLDER, "facebook_graph.png"))
