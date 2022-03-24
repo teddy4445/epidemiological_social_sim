@@ -29,7 +29,7 @@ class Plotter:
                      save_path: str,
                      normalized: bool = False):
         """
-        plot a compare bar figure
+        Plot a compare bar figure
         """
         plt.bar(range(len(x)),
                 y,

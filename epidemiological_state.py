@@ -12,7 +12,7 @@ class EpidemiologicalState(IntEnum):
     E = 1
     Ia = 2
     Is = 3
-    Rp = 4
-    Rf = 5
+    Rf = 4
+    Rp = 5
     D = 6
     STATE_COUNT = 7

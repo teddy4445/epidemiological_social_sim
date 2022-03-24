@@ -19,21 +19,43 @@ class Graph:
         self.epi_edges = epi_edges
         self.socio_edges = socio_edges
 
+        self._locked_next_nodes_epi = None
+        self._locked_next_nodes_social = None
+
     def get_size(self) -> int:
         return len(self.nodes)
 
     def next_nodes_epi(self,
                        id: int):
-        return [edge.t_id for edge in self.epi_edges if edge.s_id == id]
+        try:
+            return self._locked_next_nodes_epi[id]
+        except:
+            self._locked_next_nodes_epi = {}
+            for edge in self.epi_edges:
+                try:
+                    self._locked_next_nodes_epi[edge.s_id].append(edge.t_id)
+                except:
+                    self._locked_next_nodes_epi[edge.s_id] = [edge.t_id]
+            # now when the member is ready
+            return self.next_nodes_epi(id=id)
 
     def next_nodes_socio(self,
                          id: int):
-        return [edge.t_id for edge in self.socio_edges if edge.s_id == id]
+        try:
+            return self._locked_next_nodes_social[id]
+        except:
+            self._locked_next_nodes_social = {}
+            for edge in self.socio_edges:
+                try:
+                    self._locked_next_nodes_social[edge.s_id].append(edge.t_id)
+                except:
+                    self._locked_next_nodes_social[edge.s_id] = [edge.t_id]
+            # now when the member is ready
+            return self.next_nodes_epi(id=id)
 
     def get_items(self,
                   ids: list):
-        return [node for node in self.nodes if node.id in ids]
-
+        return [self.nodes[id] for id in ids]
 
     @staticmethod
     def generate_random(node_count: int,
@@ -42,7 +64,7 @@ class Graph:
         """
         Generate random graph with a given number of nodes and edges
         """
-        nodes = [Node. create_random_mostly_s(id=id) for id in range(node_count)]
+        nodes = [Node.create_random_mostly_s(id=id) for id in range(node_count)]
         epi_edges = []
         while len(epi_edges) < epi_edge_count:
             s_id = random.randint(0, node_count - 1)

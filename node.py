@@ -64,9 +64,9 @@ class Node:
 
     @staticmethod
     def create_random_mostly_s(id: int):
-        return Node(epidimiological_state=EpidemiologicalState.S if random.random() < 0.99 else EpidemiologicalState.Is,
+        return Node(epidimiological_state=EpidemiologicalState.S if random.random() < 0.95 else EpidemiologicalState.Is,
                     personality_vector=[random.random() for _ in range(Node.PERSONALITY_SIZE)],
-                    ideas=[random.random() for i in range(Node.IDEAS_SIZE)],
+                    ideas=[max([random.random(), 0]) for _ in range(Node.IDEAS_SIZE)],
                     id=id,
                     timer=0)
 

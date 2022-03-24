@@ -5,6 +5,8 @@ __pycache__/
 .idea/*
 *.png
 results/*
+*.lprof
+*.prof
 
 # C extensions
 *.so

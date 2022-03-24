@@ -3,6 +3,7 @@ import random
 import numpy as np
 
 # project imports
+from utils import *
 from graph import Graph
 from pips.pip import PIP
 from params import ModelParameter
@@ -49,9 +50,9 @@ class Simulator:
         """
         The main logic of the class, make a single
         """
-        # run SEIRD for each node
+        # run epidemiological dynamics
         self.epidemiological()
-        # walk the population
+        # make the social interactions
         self.social()
         # PIP the population
         self.pip.run(graph=self.graph)
@@ -65,7 +66,7 @@ class Simulator:
 
     def epidemiological(self):
         """
-        Run a single SEIRD step as the epidemiological model
+        Run a single extended SIR-based model (SEIIRRD) step as the epidemiological model
         The model includes masks + social distance + vaccination
         """
         for agent in self.graph.nodes:
@@ -99,17 +100,17 @@ class Simulator:
                     # END - ACTIVATE PIPS #
 
                     # check if infected
-                    if (pick_agent.e_state == EpidemiologicalState.Is or pick_agent.e_state == EpidemiologicalState.Ia) and infect_chance < float(ModelParameter.beta):
+                    if (pick_agent.e_state == EpidemiologicalState.Is or pick_agent.e_state == EpidemiologicalState.Ia) and infect_chance <= float(ModelParameter.beta):
                         agent.set_e_state(new_e_state=EpidemiologicalState.E)
-                    elif agent.vaccinated and agent.timer - agent.last_vaccinated_time > ModelParameter.vaccinate_delta_time:
+                    elif agent.vaccinated and (agent.timer - agent.last_vaccinated_time > ModelParameter.vaccinate_delta_time or agent.last_vaccinated_time == 0):
                         agent.vaccine_count += 1
                         agent.last_vaccinated_time = agent.timer
 
                 elif agent.e_state == EpidemiologicalState.E and agent.timer >= ModelParameter.phi:
                     if random.random() < ModelParameter.eta:
-                        agent.set_e_state(new_e_state=EpidemiologicalState.Ia)
-                    else:
                         agent.set_e_state(new_e_state=EpidemiologicalState.Is)
+                    else:
+                        agent.set_e_state(new_e_state=EpidemiologicalState.Ia)
 
                 elif agent.e_state == EpidemiologicalState.Ia and agent.timer >= ModelParameter.gamma_a:
                     agent.set_e_state(new_e_state=EpidemiologicalState.Rf)
@@ -129,9 +130,9 @@ class Simulator:
                                 remove_edges_socio.append(edge)
                         [self.graph.socio_edges.remove(edge) for edge in remove_edges_socio]
                     elif ModelParameter.psi_1 < chance <= ModelParameter.psi_2:
-                        agent.set_e_state(new_e_state=EpidemiologicalState.Rf)
-                    else:
                         agent.set_e_state(new_e_state=EpidemiologicalState.Rp)
+                    else:
+                        agent.set_e_state(new_e_state=EpidemiologicalState.Rf)
                 elif agent.e_state == EpidemiologicalState.Rf and agent.timer >= ModelParameter.chi_f:
                     agent.set_e_state(new_e_state=EpidemiologicalState.S)
                 elif agent.e_state == EpidemiologicalState.Rp and agent.timer >= ModelParameter.chi_p:
@@ -155,8 +156,8 @@ class Simulator:
             if len(other_agents) > 0:
                 for i in range(len(other_agents)):
                     # if people are too different, the ideas of one person is causing negative reaction
-                    idea_similarity = 1 - np.dot(agent.ideas, other_agents[i].ideas) / (np.linalg.norm(agent.ideas) * np.linalg.norm(other_agents[i].ideas))
-                    personality_similarity = np.dot(agent.personality_vector, other_agents[i].personality_vector) / (np.linalg.norm(agent.personality_vector) * np.linalg.norm(other_agents[i].personality_vector)) if not agent.is_virtual else 1
+                    idea_similarity = 1 - cosine_similarity_numba(agent.ideas, other_agents[i].ideas)
+                    personality_similarity = cosine_similarity_numba(agent.personality_vector, other_agents[i].personality_vector) if not agent.is_virtual else 1
                     personality_similarity_reject = 1 - personality_similarity
                     # if people we do not want to
                     if idea_similarity < ModelParameter.ideas_reject and personality_similarity_reject < ModelParameter.personality_reject:
@@ -170,7 +171,7 @@ class Simulator:
                         total_influence += personality_similarity
                     elif idea_similarity > ModelParameter.ideas_reject and personality_similarity_reject > ModelParameter.personality_reject:
                         pass  # just to show we do not take into consideration this agent
-                new_ideas.append(agent.ideas + ModelParameter.lamda * np.nansum(ideas_score, axis=0)/total_influence)
+                new_ideas.append(agent.ideas + ModelParameter.lamda * np.sum(ideas_score, axis=0)/total_influence)
             else:
                 new_ideas.append(agent.ideas)
         # allocate them back only here to avoid miss compute in the previous loop
@@ -184,9 +185,9 @@ class Simulator:
 
     def gather_epi_state(self):
         """
-        add to memory the epi state
+        Add to memory the epi state
         """
-        counters = [0 for i in range(EpidemiologicalState.STATE_COUNT)]
+        counters = [0 for _ in range(EpidemiologicalState.STATE_COUNT)]
         for agent in self.graph.nodes:
             if not agent.is_virtual:
                 counters[int(agent.e_state)] += 1
@@ -194,7 +195,7 @@ class Simulator:
 
     def gather_ideas_state(self):
         """
-        add to memory the epi state
+        Add to memory the social state
         """
         return np.nanmean([agent.ideas for agent in self.graph.nodes if not agent.is_virtual], axis=0), \
                np.nanstd([agent.ideas for agent in self.graph.nodes if not agent.is_virtual], axis=0)
@@ -204,10 +205,11 @@ class Simulator:
     # analysis #
 
     def get_max_infected(self):
-        return max([val[int(EpidemiologicalState.I)] for val in self.epi_dist])
+        return max([val[int(EpidemiologicalState.Ia)] + val[int(EpidemiologicalState.Is)]
+                    for val in self.epi_dist])
 
     def mean_r_zero(self):
-        return np.nanmean([(self.epi_dist[i + 1][int(EpidemiologicalState.I)] - self.epi_dist[i][
+        return np.mean([(self.epi_dist[i + 1][int(EpidemiologicalState.I)] - self.epi_dist[i][
             int(EpidemiologicalState.I)]) / (self.epi_dist[i + 1][int(EpidemiologicalState.R)] - self.epi_dist[i][
             int(EpidemiologicalState.R)])
                         if (self.epi_dist[i + 1][int(EpidemiologicalState.R)] - self.epi_dist[i][
