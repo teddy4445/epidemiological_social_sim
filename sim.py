@@ -129,9 +129,9 @@ class Simulator:
                                 remove_edges_socio.append(edge)
                         [self.graph.socio_edges.remove(edge) for edge in remove_edges_socio]
                     elif ModelParameter.psi_1 < chance <= ModelParameter.psi_2:
-                        agent.set_e_state(new_e_state=EpidemiologicalState.Rp)
-                    else:
                         agent.set_e_state(new_e_state=EpidemiologicalState.Rf)
+                    else:
+                        agent.set_e_state(new_e_state=EpidemiologicalState.Rp)
                 elif agent.e_state == EpidemiologicalState.Rf and agent.timer >= ModelParameter.chi_f:
                     agent.set_e_state(new_e_state=EpidemiologicalState.S)
                 elif agent.e_state == EpidemiologicalState.Rp and agent.timer >= ModelParameter.chi_p:

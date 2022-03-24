@@ -76,7 +76,7 @@ class Main:
         Plotter.basic_sim_plots(sim=sim,
                                 save_path=os.path.join(Main.RESULTS_FOLDER, "facebook_graph.png"))
         Plotter.ideas_plots(sim=sim,
-                            save_path=os.path.join(Main.RESULTS_FOLDER, "facebook_graph.png"))
+                            save_path=os.path.join(Main.RESULTS_FOLDER, "facebook_graph_ideas.png"))
 
     @staticmethod
     def io_prepare():
