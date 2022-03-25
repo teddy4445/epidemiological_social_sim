@@ -1,8 +1,5 @@
 # library imports
 import os
-import time
-import random
-import numpy as np
 
 # project imports
 from sim import Simulator
@@ -27,9 +24,9 @@ class Main:
         Run all the experiments one after the other
         """
         Main.io_prepare()
-        #Main.simple()
+        Main.simple()
         #Main.simple_anti_vaccine()
-        Main.facebook_graph()
+        #Main.facebook_graph()
 
     @staticmethod
     def simple():
