@@ -1,6 +1,9 @@
 # library imports
 import os
 import numpy as np
+import pandas as pd
+import seaborn as sns
+import networkx as nx
 import matplotlib.pyplot as plt
 
 # project imports
@@ -19,6 +22,39 @@ class Plotter:
 
     def __init__(self):
         pass
+
+    @staticmethod
+    def show_graph(graph: Graph,
+                   save_path: str):
+        """
+        Plot the graph as both social and epidemiological graphs
+        """
+        G = nx.DiGraph()
+        # create the graph
+        node_color = []
+        for node in graph.nodes:
+            G.add_node(node.id,
+                       is_virtual=node.is_virtual,
+                       state=node.e_state)
+            node_color.append(Plotter.COLORS[int(node.e_state)])
+        [G.add_edge(u_of_edge=edge.s_id,
+                    v_of_edge=edge.t_id,
+                    is_social=True)
+         for edge in graph.socio_edges]
+        [G.add_edge(u_of_edge=edge.s_id,
+                    v_of_edge=edge.t_id,
+                    is_social=False)
+         for edge in graph.epi_edges]
+        # Draw settings
+        colors = ["r" if is_social else "b" for is_social in nx.get_edge_attributes(G, 'is_social').values()]
+        # Draw image
+        nx.draw_circular(G,
+                         font_color='white',
+                         node_color=node_color,
+                         edge_color=colors,
+                         with_labels=True)
+        plt.savefig(save_path)
+        plt.close()
 
     @staticmethod
     def compare_plot(x: list,
@@ -123,5 +159,19 @@ class Plotter:
         ax.spines['right'].set_visible(False)
         ax.spines['top'].set_visible(False)
         plt.tight_layout()
+        plt.savefig(save_path, dpi=600)
+        plt.close()
+
+    @staticmethod
+    def sensitivity_heatmap(data: pd.DataFrame,
+                            xlabel: str,
+                            ylabel: str,
+                            save_path: str):
+        """
+        Plot heatmap of the given data
+        """
+        sns.heatmap(data, annot=False, cmap="coolwarm")
+        plt.xlabel(xlabel, fontsize=16)
+        plt.ylabel(ylabel, fontsize=16)
         plt.savefig(save_path, dpi=600)
         plt.close()

@@ -17,7 +17,7 @@
 8. **plotter.py** - A plots generator central class.
 9. **sim.py** - The main class in the project, responsible to run the simulation.
 10. **sim_generator.py** - A class responsible to generate random instances with some pre-defined properties of the simulator.
-11. **utils.py** - pre-compiled computational funcions.
+11. **math_utils.py** - pre-compiled computational funcions.
 12. **vaccine_reduction.py** - the infection factor reduction due to vaccine reduction. 
 
 ## Prerequisites
@@ -27,8 +27,13 @@
 - pandas          1.2.3
 - scipy           1.7.0
 - numba           0.55.1
+- seaborn         0.11.2
+- NetworkX        2.6.2
 - tuna            Latest
 - line_profiler   Latest
+- Flask           Latest
+- Werkzeug        Latest
+- yagmail         Latest
 
 These can be found in the **requirements.txt** and easily installed using the "pip install requirements.txt" command in your terminal. 
 

@@ -6,7 +6,7 @@ import numpy as np
 import concurrent.futures
 
 # project imports
-from utils import *
+from math_utils import *
 from graph import Graph
 from pips.pip import PIP
 from params import ModelParameter
@@ -21,6 +21,7 @@ class Simulator:
 
     # CONSTS #
     WORKERS = 4
+    DEBUG = True
     # END - CONSTS #
 
     def __init__(self,
@@ -57,9 +58,12 @@ class Simulator:
 
     def run(self):
         while self.step <= self.max_time:
-            print("Performing step #{}".format(self.step))
-            time_calc = self.run_step()
-            print("Computing time: {} seconds".format(time_calc))
+            if Simulator.DEBUG:
+                print("Performing step #{}".format(self.step))
+                time_calc = self.run_step()
+                print("Computing time: {} seconds".format(time_calc))
+            else:
+                self.run_step()
 
             # edge case
             if self.step > 0 and self.epi_dist[-1][int(EpidemiologicalState.Is)] == 0 and self.epi_dist[-1][
@@ -260,12 +264,9 @@ class Simulator:
                     for val in self.epi_dist])
 
     def mean_r_zero(self):
-        return np.mean([(self.epi_dist[i + 1][int(EpidemiologicalState.I)] - self.epi_dist[i][
-            int(EpidemiologicalState.I)]) / (self.epi_dist[i + 1][int(EpidemiologicalState.R)] - self.epi_dist[i][
-            int(EpidemiologicalState.R)])
-                        if (self.epi_dist[i + 1][int(EpidemiologicalState.R)] - self.epi_dist[i][
-            int(EpidemiologicalState.R)]) else (
-                self.epi_dist[i + 1][int(EpidemiologicalState.I)] - self.epi_dist[i][int(EpidemiologicalState.I)])
+        return np.mean([(self.epi_dist[i + 1][EpidemiologicalState.Is] + self.epi_dist[i + 1][EpidemiologicalState.Ia] - self.epi_dist[i][EpidemiologicalState.Is] - self.epi_dist[i][EpidemiologicalState.Ia]) / (self.epi_dist[i + 1][EpidemiologicalState.Rf] + self.epi_dist[i + 1][EpidemiologicalState.Rp] - self.epi_dist[i][EpidemiologicalState.Rf] - self.epi_dist[i][EpidemiologicalState.Rp])
+                        if self.epi_dist[i + 1][EpidemiologicalState.Rf] + self.epi_dist[i + 1][EpidemiologicalState.Rp] != self.epi_dist[i][EpidemiologicalState.Rf] + self.epi_dist[i][EpidemiologicalState.Rp] else
+                        self.epi_dist[i + 1][EpidemiologicalState.Is] + self.epi_dist[i + 1][EpidemiologicalState.Ia] - self.epi_dist[i][EpidemiologicalState.Is] - self.epi_dist[i][EpidemiologicalState.Ia]
                         for i in range(len(self.epi_dist) - 1)])
 
     def get_max_infected_portion(self):
