@@ -15,7 +15,7 @@ class ModelParameter:
     psi_2 = 0.99
     psi_3 = 1
     eta = 0.2
-    lamda = 0.01
+    lamda = 0.02
     chi_f = 45
     chi_p = 28
     personality_reject = 0.25

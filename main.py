@@ -74,6 +74,8 @@ class Main:
         facebook_model = os.path.join(os.path.dirname(__file__), "results", "facebook_sim")
         if not os.path.exists(facebook_model):
             sim = SimulatorGenerator.facebook(max_time=180)
+            sim.graph.prepare_next_nodes_epi()
+            sim.graph.prepare_next_nodes_socio()
             sim.save(path=facebook_model)
         else:
             sim = Simulator.load(path=facebook_model)

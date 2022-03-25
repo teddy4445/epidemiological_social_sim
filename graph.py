@@ -30,28 +30,34 @@ class Graph:
         try:
             return self._locked_next_nodes_epi[id]
         except:
-            self._locked_next_nodes_epi = {}
-            for edge in self.epi_edges:
-                try:
-                    self._locked_next_nodes_epi[edge.s_id].append(edge.t_id)
-                except:
-                    self._locked_next_nodes_epi[edge.s_id] = [edge.t_id]
+            self.prepare_next_nodes_epi()
             # now when the member is ready
             return self.next_nodes_epi(id=id)
+
+    def prepare_next_nodes_epi(self):
+        self._locked_next_nodes_epi = {}
+        for edge in self.epi_edges:
+            try:
+                self._locked_next_nodes_epi[edge.s_id].append(edge.t_id)
+            except:
+                self._locked_next_nodes_epi[edge.s_id] = [edge.t_id]
 
     def next_nodes_socio(self,
                          id: int):
         try:
             return self._locked_next_nodes_social[id]
         except:
-            self._locked_next_nodes_social = {}
-            for edge in self.socio_edges:
-                try:
-                    self._locked_next_nodes_social[edge.s_id].append(edge.t_id)
-                except:
-                    self._locked_next_nodes_social[edge.s_id] = [edge.t_id]
+            self.prepare_next_nodes_socio()
             # now when the member is ready
             return self.next_nodes_epi(id=id)
+
+    def prepare_next_nodes_socio(self):
+        self._locked_next_nodes_social = {}
+        for edge in self.socio_edges:
+            try:
+                self._locked_next_nodes_social[edge.s_id].append(edge.t_id)
+            except:
+                self._locked_next_nodes_social[edge.s_id] = [edge.t_id]
 
     def get_items(self,
                   ids: list):

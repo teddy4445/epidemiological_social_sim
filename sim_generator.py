@@ -36,7 +36,7 @@ class SimulatorGenerator:
         FACEBOOK_GRAPH_NODES = 4039
         FACEBOOK_MEET_CHANCE = 0.1
         epi_edges = [edge.copy() for edge in socio_edges if random.random() < FACEBOOK_MEET_CHANCE]  # if friends in facebook we believe in 10% they will meet
-        epi_end_size = round(math.sqrt(2)/FACEBOOK_MEET_CHANCE * len(epi_edges)) # we assume sqrt(2) more physical than social meetings
+        epi_end_size = round(math.sqrt(2)/FACEBOOK_MEET_CHANCE * len(epi_edges))  # we assume sqrt(2) more physical than social meetings
         while len(epi_edges) < epi_end_size:
             s_id = random.randint(0, FACEBOOK_GRAPH_NODES - 1)
             t_id = random.randint(0, FACEBOOK_GRAPH_NODES - 1)

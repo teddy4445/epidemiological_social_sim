@@ -1,8 +1,9 @@
 # library imports
+import time
 import pickle
 import random
 import numpy as np
-from concurrent.futures import ThreadPoolExecutor
+import concurrent.futures
 
 # project imports
 from utils import *
@@ -57,7 +58,8 @@ class Simulator:
     def run(self):
         while self.step <= self.max_time:
             print("Performing step #{}".format(self.step))
-            self.run_step()
+            time_calc = self.run_step()
+            print("Computing time: {} seconds".format(time_calc))
 
             # edge case
             if self.step > 0 and self.epi_dist[-1][int(EpidemiologicalState.Is)] == 0 and self.epi_dist[-1][
@@ -68,6 +70,8 @@ class Simulator:
         """
         The main logic of the class, make a single
         """
+        # count step time
+        start = time.time()
         # run epidemiological dynamics
         self.epidemiological()
         # make the social interactions
@@ -81,129 +85,154 @@ class Simulator:
         self.ideas_dist_std.append(std)
         # count this step
         self.step += 1
+        # count step time
+        return time.time() - start
 
     def epidemiological(self):
         """
         Run a single extended SIR-based model (SEIIRRD) step as the epidemiological model
         The model includes masks + social distance + vaccination
         """
-        for agent in self.graph.nodes:
-            if not agent.is_virtual:
-                # clock tic
-                agent.tic()
-                # check if need to change e-state
-                if agent.e_state == EpidemiologicalState.S:
-                    # find the neighbor agents
-                    other_agents = self.graph.next_nodes_epi(id=agent.id)
-                    # pick other agent in random
-                    pick_agent = self.graph.nodes[random.choice(other_agents)]
-                    # if infected, try to infect and record masks and social distance
-                    infect_chance = random.random()
+        deads_ids = []
+        with concurrent.futures.ThreadPoolExecutor(max_workers=Simulator.WORKERS) as executor:
+            future_to_url = [executor.submit(self.epidemiological_single, agent) for agent in self.graph.nodes if not agent.is_virtual]
+            for future in concurrent.futures.as_completed(future_to_url):
+                feture_result = future.result()
+                if feture_result[0]:
+                    deads_ids.append(feture_result[1])
 
-                    # ACTIVATE PIPS #
-                    # Masks PIP
-                    if pick_agent.wearing_mask and agent.wearing_mask:
-                        infect_chance *= ModelParameter.mask_si_reduce_factor
-                    elif agent.wearing_mask:
-                        infect_chance *= ModelParameter.mask_s_reduce_factor
-                    elif pick_agent.wearing_mask:
-                        infect_chance *= ModelParameter.mask_i_reduce_factor
+        # if an agent die, disconnect it from the graph
+        [self.remove_dead_from_network(dead_id=dead_id) for dead_id in deads_ids]
 
-                    # social distance PIP
-                    if agent.social_distance or pick_agent.social_distance:
-                        infect_chance *= ModelParameter.social_distance_reduce_factor
+    def remove_dead_from_network(self,
+                                 dead_id: int):
+        """
+        Just remove all social and epidemiological edges of dead individuals
+        """
+        remove_edges_epi = [edge for edge in self.graph.epi_edges if edge.s_id == dead_id or edge.t_id == dead_id]
+        [self.graph.epi_edges.remove(edge) for edge in remove_edges_epi]
+        remove_edges_socio = [edge for edge in self.graph.socio_edges if edge.s_id == dead_id or edge.t_id == dead_id]
+        [self.graph.socio_edges.remove(edge) for edge in remove_edges_socio]
 
-                    # vaccination PIP
-                    infect_chance *= vaccine_reduction(agent=agent)
-                    # END - ACTIVATE PIPS #
+    def epidemiological_single(self,
+                               agent) -> tuple:
+        """
+        Epidemiological logic for a single agent.
+        Return if dead or not so we delete edged from graph if needed
+        """
+        # clock tic
+        agent.tic()
+        # check if need to change e-state
+        if agent.e_state == EpidemiologicalState.S:
+            # find the neighbor agents
+            other_agents = self.graph.next_nodes_epi(id=agent.id)
+            # pick other agent in random
+            pick_agent = self.graph.nodes[random.choice(other_agents)]
+            # if infected, try to infect and record masks and social distance
+            infect_chance = random.random()
 
-                    # check if infected
-                    if (
-                            pick_agent.e_state == EpidemiologicalState.Is or pick_agent.e_state == EpidemiologicalState.Ia) and infect_chance <= float(
-                            ModelParameter.beta):
-                        agent.set_e_state(new_e_state=EpidemiologicalState.E)
-                    elif agent.vaccinated and (
-                            agent.timer - agent.last_vaccinated_time > ModelParameter.vaccinate_delta_time or agent.last_vaccinated_time == 0):
-                        agent.vaccine_count += 1
-                        agent.last_vaccinated_time = agent.timer
+            # ACTIVATE PIPS #
+            # Masks PIP
+            if pick_agent.wearing_mask and agent.wearing_mask:
+                infect_chance *= ModelParameter.mask_si_reduce_factor
+            elif agent.wearing_mask:
+                infect_chance *= ModelParameter.mask_s_reduce_factor
+            elif pick_agent.wearing_mask:
+                infect_chance *= ModelParameter.mask_i_reduce_factor
 
-                elif agent.e_state == EpidemiologicalState.E and agent.timer >= ModelParameter.phi:
-                    if random.random() < ModelParameter.eta:
-                        agent.set_e_state(new_e_state=EpidemiologicalState.Is)
-                    else:
-                        agent.set_e_state(new_e_state=EpidemiologicalState.Ia)
+            # social distance PIP
+            if agent.social_distance or pick_agent.social_distance:
+                infect_chance *= ModelParameter.social_distance_reduce_factor
 
-                elif agent.e_state == EpidemiologicalState.Ia and agent.timer >= ModelParameter.gamma_a:
-                    agent.set_e_state(new_e_state=EpidemiologicalState.Rf)
-                elif agent.e_state == EpidemiologicalState.Is and agent.timer >= ModelParameter.gamma_s:
-                    chance = random.random()
-                    if ModelParameter.psi_2 < chance <= ModelParameter.psi_3:
-                        agent.set_e_state(new_e_state=EpidemiologicalState.D)
-                        # if an agent die, disconnect it from the graph
-                        remove_edges_epi = []
-                        for edge in self.graph.epi_edges:
-                            if edge.s_id == agent.id or edge.t_id == agent.id:
-                                remove_edges_epi.append(edge)
-                        [self.graph.epi_edges.remove(edge) for edge in remove_edges_epi]
-                        remove_edges_socio = []
-                        for edge in self.graph.socio_edges:
-                            if edge.s_id == agent.id or edge.t_id == agent.id:
-                                remove_edges_socio.append(edge)
-                        [self.graph.socio_edges.remove(edge) for edge in remove_edges_socio]
-                    elif ModelParameter.psi_1 < chance <= ModelParameter.psi_2:
-                        agent.set_e_state(new_e_state=EpidemiologicalState.Rp)
-                    else:
-                        agent.set_e_state(new_e_state=EpidemiologicalState.Rf)
-                elif agent.e_state == EpidemiologicalState.Rf and agent.timer >= ModelParameter.chi_f:
-                    agent.set_e_state(new_e_state=EpidemiologicalState.S)
-                elif agent.e_state == EpidemiologicalState.Rp and agent.timer >= ModelParameter.chi_p:
-                    agent.set_e_state(new_e_state=EpidemiologicalState.S)
+            # vaccination PIP
+            infect_chance *= vaccine_reduction(agent=agent)
+            # END - ACTIVATE PIPS #
+
+            # check if infected
+            if (pick_agent.e_state == EpidemiologicalState.Is or pick_agent.e_state == EpidemiologicalState.Ia) and infect_chance <= float(
+                ModelParameter.beta):
+                agent.set_e_state(new_e_state=EpidemiologicalState.E)
+            elif agent.vaccinated and (
+                    agent.timer - agent.last_vaccinated_time > ModelParameter.vaccinate_delta_time or agent.last_vaccinated_time == 0):
+                agent.vaccine_count += 1
+                agent.last_vaccinated_time = agent.timer
+
+        elif agent.e_state == EpidemiologicalState.E and agent.timer >= ModelParameter.phi:
+            if random.random() < ModelParameter.eta:
+                agent.set_e_state(new_e_state=EpidemiologicalState.Is)
+            else:
+                agent.set_e_state(new_e_state=EpidemiologicalState.Ia)
+
+        elif agent.e_state == EpidemiologicalState.Ia and agent.timer >= ModelParameter.gamma_a:
+            agent.set_e_state(new_e_state=EpidemiologicalState.Rf)
+        elif agent.e_state == EpidemiologicalState.Is and agent.timer >= ModelParameter.gamma_s:
+            chance = random.random()
+            if ModelParameter.psi_2 < chance <= ModelParameter.psi_3:
+                agent.set_e_state(new_e_state=EpidemiologicalState.D)
+                return True, agent.id  # dead
+            elif ModelParameter.psi_1 < chance <= ModelParameter.psi_2:
+                agent.set_e_state(new_e_state=EpidemiologicalState.Rp)
+            else:
+                agent.set_e_state(new_e_state=EpidemiologicalState.Rf)
+        elif agent.e_state == EpidemiologicalState.Rf and agent.timer >= ModelParameter.chi_f:
+            agent.set_e_state(new_e_state=EpidemiologicalState.S)
+        elif agent.e_state == EpidemiologicalState.Rp and agent.timer >= ModelParameter.chi_p:
+            agent.set_e_state(new_e_state=EpidemiologicalState.S)
+        return False, agent.id  # not dead
 
     def social(self):
         """
         Run a single rummer spread step as the social model
         """
-        new_ideas = []
+        new_ideas = {}
         # compute the new ideas vectors
-        for agent in self.graph.nodes:
-            # if virtual, does not important
-            if agent.is_virtual:
-                continue
-            # get influence agents
-            other_agents = self.graph.get_items(ids=self.graph.next_nodes_socio(id=agent.id))
-            # update the current ideas
-            total_influence = 0
-            ideas_score = []
-            if len(other_agents) > 0:
-                for i in range(len(other_agents)):
-                    # if people are too different, the ideas of one person is causing negative reaction
-                    idea_similarity = 1 - cosine_similarity_numba(agent.ideas, other_agents[i].ideas)
-                    personality_similarity = cosine_similarity_numba(agent.personality_vector, other_agents[
-                        i].personality_vector) if not agent.is_virtual else 1
-                    personality_similarity_reject = 1 - personality_similarity
-                    # if people we do not want to
-                    if idea_similarity < ModelParameter.ideas_reject and personality_similarity_reject < ModelParameter.personality_reject:
-                        ideas_score.append(personality_similarity * other_agents[i].ideas)
-                        total_influence += personality_similarity
-                    elif idea_similarity < ModelParameter.ideas_reject and personality_similarity_reject > ModelParameter.personality_reject:
-                        ideas_score.append(-1 * personality_similarity * other_agents[i].ideas)
-                        total_influence += personality_similarity
-                    elif idea_similarity > ModelParameter.ideas_reject and personality_similarity_reject < ModelParameter.personality_reject:
-                        ideas_score.append(-1 * personality_similarity * other_agents[i].ideas)
-                        total_influence += personality_similarity
-                    elif idea_similarity > ModelParameter.ideas_reject and personality_similarity_reject > ModelParameter.personality_reject:
-                        pass  # just to show we do not take into consideration this agent
-                new_ideas.append(agent.ideas + ModelParameter.lamda * np.sum(ideas_score, axis=0) / total_influence)
-            else:
-                new_ideas.append(agent.ideas)
+        with concurrent.futures.ThreadPoolExecutor(max_workers=Simulator.WORKERS) as executor:
+            future_to_url = [executor.submit(self.social_single, agent) for agent in self.graph.nodes if not agent.is_virtual]
+            for future in concurrent.futures.as_completed(future_to_url):
+                feture_result = future.result()
+                new_ideas[feture_result[0]] = feture_result[1]
+
         # allocate them back only here to avoid miss compute in the previous loop
         for index, agent in enumerate(self.graph.nodes):
             if not agent.is_virtual:
-                agent.ideas = np.asarray([min([max([val, 0]), 1]) for val in new_ideas[index]])
+                agent.ideas = np.asarray([min([max([val, 0]), 1]) for val in new_ideas[agent.id]])
                 # check the status of the PIP of this agent
                 agent.wearing_mask = agent.ideas[0] > 0.5
                 agent.social_distance = agent.ideas[1] > 0.5
                 agent.vaccinated = agent.ideas[2] > 0.5
+
+    def social_single(self,
+                      agent) -> tuple:
+        """
+        Compute the new idea vector of a single agent
+        """
+        # get influence agents
+        other_agents = self.graph.get_items(ids=self.graph.next_nodes_socio(id=agent.id))
+        # update the current ideas
+        total_influence = 0
+        ideas_score = []
+        if len(other_agents) > 0:
+            for i in range(len(other_agents)):
+                # if people are too different, the ideas of one person is causing negative reaction
+                idea_similarity = 1 - cosine_similarity_numba(agent.ideas, other_agents[i].ideas)
+                personality_similarity = cosine_similarity_numba(agent.personality_vector, other_agents[
+                    i].personality_vector) if not agent.is_virtual else 1
+                personality_similarity_reject = 1 - personality_similarity
+                # if people we do not want to
+                if idea_similarity < ModelParameter.ideas_reject and personality_similarity_reject < ModelParameter.personality_reject:
+                    ideas_score.append(personality_similarity * other_agents[i].ideas)
+                    total_influence += personality_similarity
+                elif idea_similarity < ModelParameter.ideas_reject and personality_similarity_reject > ModelParameter.personality_reject:
+                    ideas_score.append(-1 * personality_similarity * other_agents[i].ideas)
+                    total_influence += personality_similarity
+                elif idea_similarity > ModelParameter.ideas_reject and personality_similarity_reject < ModelParameter.personality_reject:
+                    ideas_score.append(-1 * personality_similarity * other_agents[i].ideas)
+                    total_influence += personality_similarity
+                elif idea_similarity > ModelParameter.ideas_reject and personality_similarity_reject > ModelParameter.personality_reject:
+                    pass  # just to show we do not take into consideration this agent
+            return agent.id, agent.ideas + ModelParameter.lamda * np.sum(ideas_score, axis=0) / total_influence
+        else:
+            return agent.id, agent.ideas
 
     def gather_epi_state(self):
         """
