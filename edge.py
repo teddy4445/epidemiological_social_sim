@@ -28,5 +28,5 @@ class Edge:
         return self.__str__()
 
     def __str__(self):
-        return "<Edge: {}->{}>".format(self.s_id,
-                                       self.t_id)
+        return "<Edge: {}<->{}>".format(self.s_id,
+                                        self.t_id)

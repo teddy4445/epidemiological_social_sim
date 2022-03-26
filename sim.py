@@ -20,7 +20,7 @@ class Simulator:
     """
 
     # CONSTS #
-    WORKERS = 4
+    WORKERS = 8
     DEBUG = True
     # END - CONSTS #
 
@@ -56,7 +56,8 @@ class Simulator:
             answer = pickle.load(sim_file)
         return answer
 
-    def run(self):
+    def run(self,
+            stop_early: bool = False):
         while self.step <= self.max_time:
             if Simulator.DEBUG:
                 print("Performing step #{}".format(self.step))
@@ -66,9 +67,13 @@ class Simulator:
                 self.run_step()
 
             # edge case
-            if self.step > 0 and self.epi_dist[-1][int(EpidemiologicalState.Is)] == 0 and self.epi_dist[-1][
-                int(EpidemiologicalState.Ia)] == 0:
-                self.epi_dist.append(self.epi_dist[-1].copy())
+            if self.step > 0 and self.epi_dist[-1][int(EpidemiologicalState.Is)] == 0 and self.epi_dist[-1][int(EpidemiologicalState.Ia)] == 0:
+                if stop_early:
+                    break
+                else:
+                    self.epi_dist.append(self.epi_dist[-1].copy())
+                    self.ideas_dist_mean.append(self.ideas_dist_mean[-1].copy())
+                    self.ideas_dist_std.append(self.ideas_dist_std[-1].copy())
 
     def run_step(self):
         """
@@ -131,7 +136,10 @@ class Simulator:
             # find the neighbor agents
             other_agents = self.graph.next_nodes_epi(id=agent.id)
             # pick other agent in random
-            pick_agent = self.graph.nodes[random.choice(other_agents)]
+            if len(other_agents) > 0:
+                pick_agent = self.graph.nodes[random.choice(other_agents)]
+            else:
+                pick_agent = agent.copy()
             # if infected, try to infect and record masks and social distance
             infect_chance = random.random()
 

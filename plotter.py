@@ -30,8 +30,10 @@ class Plotter:
         """
         Plot the graph's social and epidemiological connectivity
         """
-        plt.hist([len(graph.next_nodes_epi(id=node.id)) for node in graph.nodes], bins_count, density=True, facecolor='r', alpha=0.5, label="Epidemiological")
-        plt.hist([len(graph.next_nodes_socio(id=node.id)) for node in graph.nodes], bins_count, density=True, facecolor='b', alpha=0.5, label="Social")
+        plt.hist([len(graph.next_nodes_epi(id=node.id)) for node in graph.nodes], bins_count, density=False,
+                 facecolor='r', alpha=0.5, label="Epidemiological")
+        plt.hist([len(graph.next_nodes_socio(id=node.id)) for node in graph.nodes], bins_count, density=False,
+                 facecolor='b', alpha=0.5, label="Social")
         plt.xlabel('Connections')
         plt.ylabel('Count')
         plt.grid(alpha=0.2,
@@ -47,7 +49,7 @@ class Plotter:
         """
         Plot the graph as both social and epidemiological graphs
         """
-        G = nx.DiGraph()
+        G = nx.Graph()
         # create the graph
         node_color = []
         for node in graph.nodes:
@@ -66,11 +68,11 @@ class Plotter:
         # Draw settings
         colors = ["b" if is_social else "r" for is_social in nx.get_edge_attributes(G, 'is_social').values()]
         # Draw image
-        nx.draw_circular(G,
-                         font_color='white',
-                         node_color=node_color,
-                         edge_color=colors,
-                         with_labels=True)
+        nx.draw_kamada_kawai(G,
+                             font_color='white',
+                             node_color=node_color,
+                             edge_color=colors,
+                             with_labels=True)
         plt.savefig(save_path)
         plt.close()
 

@@ -27,12 +27,18 @@ class Graph:
 
     def next_nodes_epi(self,
                        id: int):
-        try:
-            return self._locked_next_nodes_epi[id]
-        except:
+        if self._locked_next_nodes_epi is not None:
+            try:
+                return self._locked_next_nodes_epi[id]
+            except:
+                return []
+        else:
             self.prepare_next_nodes_epi()
             # now when the member is ready
-            return self.next_nodes_epi(id=id)
+            try:
+                return self._locked_next_nodes_epi[id]
+            except:
+                return []
 
     def prepare_next_nodes_epi(self):
         self._locked_next_nodes_epi = {}
@@ -44,12 +50,18 @@ class Graph:
 
     def next_nodes_socio(self,
                          id: int):
-        try:
-            return self._locked_next_nodes_social[id]
-        except:
+        if self._locked_next_nodes_social is not None:
+            try:
+                return self._locked_next_nodes_social[id]
+            except:
+                return []
+        else:
             self.prepare_next_nodes_socio()
             # now when the member is ready
-            return self.next_nodes_epi(id=id)
+            try:
+                return self._locked_next_nodes_social[id]
+            except:
+                return []
 
     def prepare_next_nodes_socio(self):
         self._locked_next_nodes_social = {}

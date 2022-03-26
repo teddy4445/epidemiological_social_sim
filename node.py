@@ -70,6 +70,19 @@ class Node:
                     id=id,
                     timer=0)
 
+    def copy(self):
+        return Node(epidimiological_state=self.e_state,
+                    personality_vector=self.personality_vector.copy(),
+                    ideas=self.ideas.copy(),
+                    id=self.id,
+                    timer=self.timer,
+                    is_virtual=self.is_virtual,
+                    wearing_mask=self.wearing_mask,
+                    social_distance=self.social_distance,
+                    vaccinated=self.vaccinated,
+                    vaccine_count=self.vaccine_count,
+                    last_vaccinated_time=self.last_vaccinated_time)
+
     def tic(self):
         self.timer += 1
 
