@@ -46,6 +46,9 @@ class Main:
                                                epi_edge_count=5 * 5,
                                                socio_edge_count=20 * 5,
                                                max_time=300)
+        Plotter.show_graph_connectivity(graph=sim.graph,
+                                        bins_count=20,
+                                        save_path=os.path.join(Main.RESULTS_FOLDER, "simple_graph_connectivity.png"))
         sim.run()
         Plotter.show_graph(graph=sim.graph,
                            save_path=os.path.join(Main.RESULTS_FOLDER, "simple_graph.png"))

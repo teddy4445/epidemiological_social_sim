@@ -24,6 +24,24 @@ class Plotter:
         pass
 
     @staticmethod
+    def show_graph_connectivity(graph: Graph,
+                                save_path: str,
+                                bins_count: int = 50):
+        """
+        Plot the graph's social and epidemiological connectivity
+        """
+        plt.hist([len(graph.next_nodes_epi(id=node.id)) for node in graph.nodes], bins_count, density=True, facecolor='r', alpha=0.5, label="Epidemiological")
+        plt.hist([len(graph.next_nodes_socio(id=node.id)) for node in graph.nodes], bins_count, density=True, facecolor='b', alpha=0.5, label="Social")
+        plt.xlabel('Connections')
+        plt.ylabel('Count')
+        plt.grid(alpha=0.2,
+                 color="black")
+        plt.legend()
+        plt.tight_layout()
+        plt.savefig(save_path)
+        plt.close()
+
+    @staticmethod
     def show_graph(graph: Graph,
                    save_path: str):
         """
@@ -46,7 +64,7 @@ class Plotter:
                     is_social=False)
          for edge in graph.epi_edges]
         # Draw settings
-        colors = ["r" if is_social else "b" for is_social in nx.get_edge_attributes(G, 'is_social').values()]
+        colors = ["b" if is_social else "r" for is_social in nx.get_edge_attributes(G, 'is_social').values()]
         # Draw image
         nx.draw_circular(G,
                          font_color='white',
