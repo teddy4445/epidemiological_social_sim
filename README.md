@@ -30,7 +30,6 @@
 - seaborn         0.11.2
 - NetworkX        2.6.2
 - scikit-learn    1.0.2
-- keras           2.8.0
 - tuna            Latest
 - line_profiler   Latest
 - Flask           Latest

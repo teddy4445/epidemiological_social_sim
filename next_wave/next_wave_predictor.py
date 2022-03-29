@@ -2,8 +2,9 @@
 import numpy as np
 import pandas as pd
 import scipy.stats as stats
-from tensorflow import keras
+from xgboost import XGBRegressor
 from sklearn.metrics import accuracy_score
+from sklearn.model_selection import cross_val_score
 
 # project imports
 
@@ -14,56 +15,42 @@ class NextWavePredictor:
     of pandemic and returns when it finds next wave in a binary way
     """
 
+    # CONSTS #
+    Y_COL_NAME = ""
+    DATE_COL_NAME = ""
+    # END - CONSTS #
+
     def __init__(self,
                  prediction_delay: int = 1):
         self._prediction_delay = prediction_delay
         self._model = None
 
     def fit(self,
-            name: str,
             x_train: pd.DataFrame,
-            y_train: pd.Series,
-            epochs: int = 100,
-            batch_size: int = 32):
+            y_train: pd.DataFrame):
         """
         Fit the model on the data
         """
-        # prepare model
-        self._model = NextWavePredictor.make_model(input_shape=x_train.shape[1:])
-        callbacks = [
-            keras.callbacks.ModelCheckpoint(
-                "best_model_{}.h5".format(name),
-                save_best_only=True,
-                monitor="val_loss"
-            ),
-            keras.callbacks.ReduceLROnPlateau(
-                monitor="val_loss", factor=0.5, patience=20, min_lr=0.0001
-            ),
-            keras.callbacks.EarlyStopping(monitor="val_loss", patience=50, verbose=1),
-        ]
-        self._model.compile(
-            optimizer="adam",
-            loss="sparse_categorical_crossentropy",
-            metrics=["sparse_categorical_accuracy"],
-        )
-        history = self._model.fit(
-            x_train,
-            y_train,
-            batch_size=batch_size,
-            epochs=epochs,
-            callbacks=callbacks,
-            validation_split=0.2,
-            verbose=1,
-        )
-        self._model = keras.models.load_model("best_model_{}.h5".format(name))
-
-    def test(self,
-              x_test: pd.DataFrame,
-              y_test: pd.Series):
-        """
-        Used the trained model to predict the outcome
-        """
-        return self._model.evaluate(x_test, y_test)
+        df = x_train.copy()
+        df["y_delayed"] = y_train
+        df = NextWavePredictor.series_to_supervised(df=df,
+                                                    n_in=14,
+                                                    n_out=self._prediction_delay,
+                                                    dropnan=True)
+        x_train, y_train = df.drop(["y"], axis=1), df["y"]
+        model = XGBRegressor(objective='reg:squarederror')
+        scores = cross_val_score(model,
+                                 x_train,
+                                 y_train,
+                                 cv=5,
+                                 scoring='mean_squared_error',
+                                 verbose=1)
+        # let the user know about the performance
+        print("NextWavePredictor.fit: mean = {:.3f}, std = {:.3f}".format(np.nanmean(scores),
+                                                                          np.nanstd(scores)))
+        # train on all the train data
+        self._model = model.fit(x_train,
+                                y_train)
 
     def predict(self,
                 x: pd.DataFrame):
@@ -86,43 +73,51 @@ class NextWavePredictor:
                       y_pred=self.predict(x=x_test))
 
     @staticmethod
-    def prepare(x: pd.DataFrame,
-                y: pd.Series,
-                y_classify_function):
+    def prepare(x: pd.DataFrame):
         """
         Prepare the data for analysis by the model, run before the fit function to get best results.
-        Of note, the 'y_classify_function' is a function that gets a pd.Series and returns a binary pd.Series indicates when an event is occurred
         """
         # first, remove lines we cannot use
         x.dropna(inplace=True)
+        # remove unneed data
+        unneeded_cols = []
+        x.drop(unneeded_cols, axis=1, inplace=True)
+        # sort by date
+        x = x.sort_values(NextWavePredictor.DATE_COL_NAME)
         # normalize signal
         x = x.select_dtypes(include='number').apply(stats.zscore)
         # compute the binary event-based y-signal
-        return x, y_classify_function(y)
+        return x
 
     @staticmethod
-    def make_model(input_shape,
-                   num_classes: int = 2):
+    def series_to_supervised(df,
+                             n_in=1,
+                             n_out=1,
+                             dropnan=True):
         """
-        Build the structure of the NN
+        Frame a time series as a supervised learning dataset.
+        Arguments:
+            data: Sequence of observations as a list or NumPy array.
+            n_in: Number of lag observations as input (X).
+            n_out: Number of observations as output (y).
+            dropnan: Boolean whether or not to drop rows with NaN values.
+        Returns:
+            Pandas DataFrame of series framed for supervised learning.
         """
-        input_layer = keras.layers.Input(input_shape)
-
-        conv1 = keras.layers.Conv1D(filters=64, kernel_size=3, padding="same")(input_layer)
-        conv1 = keras.layers.BatchNormalization()(conv1)
-        conv1 = keras.layers.ReLU()(conv1)
-
-        conv2 = keras.layers.Conv1D(filters=64, kernel_size=3, padding="same")(conv1)
-        conv2 = keras.layers.BatchNormalization()(conv2)
-        conv2 = keras.layers.ReLU()(conv2)
-
-        conv3 = keras.layers.Conv1D(filters=64, kernel_size=3, padding="same")(conv2)
-        conv3 = keras.layers.BatchNormalization()(conv3)
-        conv3 = keras.layers.ReLU()(conv3)
-
-        gap = keras.layers.GlobalAveragePooling1D()(conv3)
-
-        output_layer = keras.layers.Dense(num_classes, activation="softmax")(gap)
-
-        return keras.models.Model(inputs=input_layer, outputs=output_layer)
-
+        n_vars = 1 if type(df) is list else df.shape[1]
+        var_names = list(df)
+        cols, names = list(), list()
+        # input sequence (t-n, ... t-1)
+        for i in range(n_in, -1, -1):
+            cols.append(df.shift(i))
+            names += ['{}(t-{})'.format(var_names[j], i) for j in range(n_vars)]
+        # forecast var
+        cols.append(df.shift(-n_out))
+        names += "y"
+        # put it all together
+        agg = pd.concat(cols, axis=1)
+        agg.columns = names
+        # drop rows with NaN values
+        if dropnan:
+            agg.dropna(inplace=True)
+        return agg
