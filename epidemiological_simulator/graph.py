@@ -2,8 +2,8 @@
 import random
 
 # project imports
-from node import Node
-from edge import Edge
+from epidemiological_simulator.node import Node
+from epidemiological_simulator.edge import Edge
 
 
 class Graph:

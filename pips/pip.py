@@ -1,7 +1,7 @@
 # library imports
 
 # project imports
-from graph import Graph
+from epidemiological_simulator.graph import Graph
 
 
 class PIP:

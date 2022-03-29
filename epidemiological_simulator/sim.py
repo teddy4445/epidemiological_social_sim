@@ -2,16 +2,15 @@
 import time
 import pickle
 import random
-import numpy as np
 import concurrent.futures
 
 # project imports
-from math_utils import *
-from graph import Graph
+from epidemiological_simulator.math_utils import *
+from epidemiological_simulator.graph import Graph
 from pips.pip import PIP
-from params import ModelParameter
-from vaccine_reduction import vaccine_reduction
-from epidemiological_state import EpidemiologicalState
+from epidemiological_simulator.params import ModelParameter
+from epidemiological_simulator.vaccine_reduction import vaccine_reduction
+from epidemiological_simulator.epidemiological_state import EpidemiologicalState
 
 
 class Simulator:

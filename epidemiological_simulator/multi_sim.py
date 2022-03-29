@@ -9,7 +9,7 @@ class MultiSim:
     Run the simulation for multiple times and save some results
     """
 
-    RESULTS_FOLDER = os.path.join(os.path.dirname(__file__), "results")
+    RESULTS_FOLDER = os.path.join(os.path.dirname(__file__), "../results")
 
     def __init__(self):
         pass

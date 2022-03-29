@@ -4,12 +4,12 @@ import math
 import random
 
 # project imports
-from edge import Edge
-from node import Node
-from graph import Graph
+from epidemiological_simulator.edge import Edge
+from epidemiological_simulator.node import Node
+from epidemiological_simulator.graph import Graph
 from pips.pip import PIP
-from sim import Simulator
-from epidemiological_state import EpidemiologicalState
+from epidemiological_simulator.sim import Simulator
+from epidemiological_simulator.epidemiological_state import EpidemiologicalState
 
 
 class SimulatorGenerator:
@@ -25,7 +25,7 @@ class SimulatorGenerator:
         random.seed(73)  # SHELDON's number so the graph will be always the same
 
         socio_edges = []
-        with open(os.path.join(os.path.dirname(__file__), "data", "facebook.txt"), "r") as graph_edges:
+        with open(os.path.join(os.path.dirname(__file__), "../data", "facebook.txt"), "r") as graph_edges:
             for line in graph_edges.readlines():
                 vals = line.strip().split(" ")
                 if len(vals) == 2:

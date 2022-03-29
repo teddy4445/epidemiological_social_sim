@@ -1,7 +1,7 @@
 # library imports
 
 # projects imports
-from node import Node
+from epidemiological_simulator.node import Node
 
 
 def vaccine_reduction(agent: Node) -> float:

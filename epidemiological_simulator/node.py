@@ -3,7 +3,7 @@ import random
 import numpy as np
 
 # project imports
-from epidemiological_state import EpidemiologicalState
+from epidemiological_simulator.epidemiological_state import EpidemiologicalState
 
 
 class Node:

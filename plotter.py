@@ -1,5 +1,4 @@
 # library imports
-import os
 import numpy as np
 import pandas as pd
 import seaborn as sns
@@ -7,8 +6,8 @@ import networkx as nx
 import matplotlib.pyplot as plt
 
 # project imports
-from graph import Graph
-from sim import Simulator
+from epidemiological_simulator.graph import Graph
+from epidemiological_simulator.sim import Simulator
 
 
 class Plotter:
@@ -19,9 +18,49 @@ class Plotter:
     COLORS = ["#34A853", "#FBBC05", "#EA4335", "#7a150d", "#4285F4", "#a83489", "#111111"]
     STYLES = ["-o", "-s", "-^", "--^", "-P", "--P", "-D"]
     LABELS = ["S", "E", "$I^a$", "$I^s$", "$R^f$", "$R^p$", "D"]
+    DPI = 600
 
     def __init__(self):
         pass
+
+    @staticmethod
+    def plot_wave_signal(x: pd.DataFrame,
+                         y_signal: pd.Series,
+                         binary_y_signal: pd.Series,
+                         save_path: str):
+        """
+        Plot the data used to train the 'next wave' model
+        """
+        plt.figure()
+        # the x-signals
+        [plt.plot(range(len(list(x[col]))),
+                  x[col],
+                  "-{}".format(Plotter.STYLES[index][-1]),
+                  linewidth=1,
+                  color=Plotter.COLORS[index],
+                  label="X-{}".format(col))
+         for index, col in enumerate(list(x))]
+        # the y signal
+        plt.plot(range(len(list(y_signal))),
+                 y_signal,
+                 "--",
+                 linewidth=2,
+                 color="black",
+                 label="Y")
+        # the y signal after extraction of the events
+        plt.scatter([index for index, val in enumerate(binary_y_signal) if val == 1],
+                    [y[index] for index, val in enumerate(binary_y_signal) if val == 1],
+                    "o",
+                    color="black",
+                    label="Events")
+        plt.legend(loc="best")
+        plt.xlabel('Time [days]')
+        plt.ylabel('Signals')
+        plt.grid(alpha=0.1,
+                 color="black")
+        plt.tight_layout()
+        plt.savefig(save_path, dpi=Plotter.DPI)
+        plt.close()
 
     @staticmethod
     def show_graph_connectivity(graph: Graph,
@@ -40,7 +79,7 @@ class Plotter:
                  color="black")
         plt.legend()
         plt.tight_layout()
-        plt.savefig(save_path)
+        plt.savefig(save_path, dpi=Plotter.DPI)
         plt.close()
 
     @staticmethod
@@ -73,7 +112,7 @@ class Plotter:
                              node_color=node_color,
                              edge_color=colors,
                              with_labels=True)
-        plt.savefig(save_path)
+        plt.savefig(save_path, dpi=Plotter.DPI)
         plt.close()
 
     @staticmethod
@@ -112,7 +151,7 @@ class Plotter:
                  axis="y",
                  color="black")
         plt.tight_layout()
-        plt.savefig(save_path, dpi=600)
+        plt.savefig(save_path, dpi=Plotter.DPI)
         plt.close()
 
     @staticmethod
@@ -140,7 +179,7 @@ class Plotter:
         ax.spines['right'].set_visible(False)
         ax.spines['top'].set_visible(False)
         plt.tight_layout()
-        plt.savefig(save_path, dpi=600)
+        plt.savefig(save_path, dpi=Plotter.DPI)
         plt.close()
 
     @staticmethod
@@ -179,7 +218,7 @@ class Plotter:
         ax.spines['right'].set_visible(False)
         ax.spines['top'].set_visible(False)
         plt.tight_layout()
-        plt.savefig(save_path, dpi=600)
+        plt.savefig(save_path, dpi=Plotter.DPI)
         plt.close()
 
     @staticmethod
@@ -193,5 +232,5 @@ class Plotter:
         sns.heatmap(data, annot=False, cmap="coolwarm")
         plt.xlabel(xlabel, fontsize=16)
         plt.ylabel(ylabel, fontsize=16)
-        plt.savefig(save_path, dpi=600)
+        plt.savefig(save_path, dpi=Plotter.DPI)
         plt.close()

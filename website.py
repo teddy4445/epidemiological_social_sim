@@ -2,14 +2,12 @@
 import os
 import json
 import datetime
-import pandas as pd
-from werkzeug.utils import secure_filename
 from flask import Flask, render_template, request
 
 # project imports
-from graph import Graph
+from epidemiological_simulator.graph import Graph
 from pips.pip import PIP
-from sim import Simulator
+from epidemiological_simulator.sim import Simulator
 from plotter import Plotter
 from utils.email_sender import EmailSender
 
