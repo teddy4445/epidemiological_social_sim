@@ -1,7 +1,6 @@
 # library imports
 import os
-import re
-import numpy as np
+import json
 import pandas as pd
 
 
@@ -105,14 +104,18 @@ class PrepareSignals:
         """
         signals_sizes = [len(signal) for signal in word_clusters_in_signals]
         answer = self._df[[PrepareSignals.WHO_DATE_COL_NAME, PrepareSignals.Y_COL_NAME]].copy()
+        answer[PrepareSignals.Y_COL_NAME] = answer[PrepareSignals.Y_COL_NAME].diff(1)
         for signal_index, signal_cluster in enumerate(word_clusters_in_signals):
-            answer["signal_".format(signal_index)] = sum([sum([val for key, val in word_set if key in word_clusters_in_signals[signal_index]])
-                                                          for word_set in self._df[PrepareSignals.WORDS_COL_NAME]])/signals_sizes[signal_index]
+            answer["signal_{}".format(signal_index)] = [sum([val     for key, val in json.loads(word_set.replace("'", "\"")).items() if key in word_clusters_in_signals[signal_index]])/signals_sizes[signal_index]
+                                                        for word_set in self._df[PrepareSignals.WORDS_COL_NAME]]
+        answer.dropna(inplace=True)
         if save_results_path != "":
-            answer.to_csv(save_results_path)
+            answer.to_csv(save_results_path,
+                          index=False)
         return answer
 
 
 if __name__ == '__main__':
-    PrepareSignals().load()
-    # PrepareSignals().load_final().convert_to_signals(word_clusters_in_signals=[["covid"], ["vaccine"]], save_results_path=os.path.join(os.path.dirname(os.path.dirname(__file__)), "results", "convert_to_signals.csv"))
+    # PrepareSignals().load()
+    PrepareSignals().load_final().convert_to_signals(word_clusters_in_signals=[["covid"], ["vaccine"]],
+                                                     save_results_path=os.path.join(os.path.dirname(os.path.dirname(__file__)), "results", "convert_to_signals.csv"))
