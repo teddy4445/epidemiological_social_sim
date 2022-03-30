@@ -30,12 +30,17 @@ class NextWave:
         self._models = {}
 
     def load_data(self,
-                  path: str):
+                  path_or_df: str):
         """
         Load the data needed to the model and prepare to train the models
         """
         # load data
-        data = pd.read_csv(path)
+        if isinstance(path_or_df, str):
+            data = pd.read_csv(path_or_df)
+        elif isinstance(path_or_df, pd.DataFrame):
+            data = path_or_df
+        else:
+            raise Exception("Error at NextWave.load_data: not support argument type '{}'".format(type(path_or_df)))
         # prepare for the model
         x = NextWavePredictor.prepare(x=data.drop([NextWave.Y_COL_NAME]))
         y = data[NextWave.Y_COL_NAME]

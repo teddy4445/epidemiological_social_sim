@@ -67,13 +67,6 @@ class PrepareSignals:
         min_epi_date = min(_who[PrepareSignals.WHO_DATE_COL_NAME])
         max_epi_date = max(_who[PrepareSignals.WHO_DATE_COL_NAME])
         _twitter.drop(_twitter[(_twitter[PrepareSignals.TWITTER_DATE_COL_NAME] < min_epi_date) | (_twitter[PrepareSignals.TWITTER_DATE_COL_NAME] > max_epi_date)].index, inplace=True)
-        # save results back so we can see what is going on
-        if False:
-            print("PrepareSignals.load: save mediate dataframes")
-            _twitter.to_csv(PrepareSignals.FIXED_DEFAULT_TWITTER_PATH,
-                            index=False)
-            _who.to_csv(PrepareSignals.FIXED_DEFAULT_WHO_PATH,
-                        index=False)
         # merge data based on the date
         print("PrepareSignals.load: build final dataset")
         self._df = pd.DataFrame(data=_who.values,
@@ -106,16 +99,11 @@ class PrepareSignals:
         answer = self._df[[PrepareSignals.WHO_DATE_COL_NAME, PrepareSignals.Y_COL_NAME]].copy()
         answer[PrepareSignals.Y_COL_NAME] = answer[PrepareSignals.Y_COL_NAME].diff(1)
         for signal_index, signal_cluster in enumerate(word_clusters_in_signals):
-            answer["signal_{}".format(signal_index)] = [sum([val     for key, val in json.loads(word_set.replace("'", "\"")).items() if key in word_clusters_in_signals[signal_index]])/signals_sizes[signal_index]
+            answer["signal_{}".format(signal_index)] = [sum([val
+                                                             for key, val in json.loads(word_set.replace("'", "\"")).items() if key in word_clusters_in_signals[signal_index]])/signals_sizes[signal_index]
                                                         for word_set in self._df[PrepareSignals.WORDS_COL_NAME]]
         answer.dropna(inplace=True)
         if save_results_path != "":
             answer.to_csv(save_results_path,
                           index=False)
         return answer
-
-
-if __name__ == '__main__':
-    # PrepareSignals().load()
-    PrepareSignals().load_final().convert_to_signals(word_clusters_in_signals=[["covid"], ["vaccine"]],
-                                                     save_results_path=os.path.join(os.path.dirname(os.path.dirname(__file__)), "results", "convert_to_signals.csv"))
