@@ -4,6 +4,7 @@ import pandas as pd
 import scipy.stats as stats
 from xgboost import XGBRegressor
 from sklearn.metrics import accuracy_score
+from sklearn.model_selection import RepeatedKFold
 from sklearn.model_selection import cross_val_score
 
 # project imports
@@ -42,10 +43,13 @@ class NextWavePredictor:
         scores = cross_val_score(model,
                                  x_train,
                                  y_train,
-                                 cv=5,
+                                 cv=RepeatedKFold(n_splits=5,
+                                                  n_repeats=3,
+                                                  random_state=73),
                                  scoring='mean_squared_error',
                                  verbose=1)
         # let the user know about the performance
+        scores = [abs(val) for val in scores]
         print("NextWavePredictor.fit: mean = {:.3f}, std = {:.3f}".format(np.nanmean(scores),
                                                                           np.nanstd(scores)))
         # train on all the train data

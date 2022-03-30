@@ -30,17 +30,15 @@ class NextWave:
         self._models = {}
 
     def load_data(self,
-                  social_path: str,
-                  epidemiological_path: str):
+                  path: str):
         """
         Load the data needed to the model and prepare to train the models
         """
         # load data
-        socio_data = pd.read_csv(social_path)
-        epi_data = pd.read_csv(epidemiological_path)
+        data = pd.read_csv(path)
         # prepare for the model
-        x = NextWavePredictor.prepare(x=socio_data)
-        y = epi_data[NextWave.Y_COL_NAME]
+        x = NextWavePredictor.prepare(x=data.drop([NextWave.Y_COL_NAME]))
+        y = data[NextWave.Y_COL_NAME]
         # split the data
         self.x_train = x.iloc[:x.shape[1]*NextWave.TRAIN_PORTION,: ]
         self.x_test = x.iloc[x.shape[1]*NextWave.TRAIN_PORTION:,: ]

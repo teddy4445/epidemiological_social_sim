@@ -5,6 +5,7 @@ __pycache__/
 .idea/*
 *.png
 results/*
+data/*
 *.lprof
 *.prof
 
