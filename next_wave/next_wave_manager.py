@@ -3,10 +3,26 @@ import os
 import json
 import pandas as pd
 import scipy.stats as stats
+from sklearn.metrics import accuracy_score, recall_score, precision_score
 
 # project imports
 from plotter import Plotter
 from next_wave.next_wave_predictor import NextWavePredictor
+
+
+def count_event_hit(y_true, y_pred):
+    """
+    Count the number of time y_true == y_pred == 1 out of y_true == 1
+    """
+    assert len(y_pred) == len(y_true)
+    count = 0
+    hit_count = 0
+    for i in range(len(y_true)):
+        if y_true[i] == 1:
+            count += 1
+            if y_true[i] == y_pred[i]:
+                hit_count += 1
+    return hit_count/count
 
 
 class NextWaveManager:
@@ -18,11 +34,13 @@ class NextWaveManager:
     # CONSTS #
     TRAIN_PORTION = 0.9
     Y_COL_NAME = "cases"
+    N_IN = 14
+
     # END - CONSTS #
 
     def __init__(self,
                  prediction_delays: list = None):
-        self._prediction_delays = prediction_delays if prediction_delays is not None else [7*i for i in range(0,5)]
+        self._prediction_delays = prediction_delays if prediction_delays is not None else [7 * i for i in range(0, 5)]
         self.data = None
         self._models = {}
 
@@ -37,7 +55,8 @@ class NextWaveManager:
         elif isinstance(path_or_df, pd.DataFrame):
             data = path_or_df
         else:
-            raise Exception("Error at NextWaveManager.load_data: not support argument type '{}'".format(type(path_or_df)))
+            raise Exception(
+                "Error at NextWaveManager.load_data: not support argument type '{}'".format(type(path_or_df)))
         # prepare for the model
         x = NextWavePredictor.prepare(x=data.drop([NextWaveManager.Y_COL_NAME], axis=1, inplace=False))
         y = pd.Series(stats.zscore(data[NextWaveManager.Y_COL_NAME]))
@@ -48,12 +67,14 @@ class NextWaveManager:
                                  y_signal=y,
                                  binary_y_signal=NextWaveManager.y_classify_function(y=y),
                                  smooth=False,
-                                 save_path=os.path.join(os.path.dirname(os.path.dirname(__file__)), "results", "next_wave_prepared_data.png"))
+                                 save_path=os.path.join(os.path.dirname(os.path.dirname(__file__)), "results",
+                                                        "next_wave_prepared_data.png"))
         Plotter.plot_wave_signal(x=x,
                                  y_signal=y,
                                  binary_y_signal=NextWaveManager.y_classify_function(y=y),
                                  smooth=True,
-                                 save_path=os.path.join(os.path.dirname(os.path.dirname(__file__)), "results", "smoothed_next_wave_prepared_data.png"))
+                                 save_path=os.path.join(os.path.dirname(os.path.dirname(__file__)), "results",
+                                                        "smoothed_next_wave_prepared_data.png"))
 
     def fit(self):
         """
@@ -63,7 +84,7 @@ class NextWaveManager:
         accuracy_test = []
         for delay in self._prediction_delays:
             df = NextWavePredictor.series_to_supervised(df=self.data,
-                                                        n_in=14,
+                                                        n_in=NextWaveManager.N_IN,
                                                         n_out=delay,
                                                         dropnan=True)
             x = df.drop(["y"], axis=1)
@@ -82,16 +103,56 @@ class NextWaveManager:
             # recall results
             accuracy_test.append(test_acc)
         # show the results o
-        with open(os.path.join(os.path.dirname(os.path.dirname(__file__)), "results", "fit_results.json"), "w") as next_wave_file:
+        with open(os.path.join(os.path.dirname(os.path.dirname(__file__)), "results", "fit_results.json"),
+                  "w") as next_wave_file:
             json.dump({"delays": self._prediction_delays,
                        "accuracy": accuracy_test},
                       next_wave_file)
+
+    def eval(self):
+        """
+        This function eval the model on binary event
+        """
+        for delay in self._prediction_delays:
+            df = NextWavePredictor.series_to_supervised(df=self.data,
+                                                        n_in=NextWaveManager.N_IN,
+                                                        n_out=delay,
+                                                        dropnan=True)
+            x = df.drop(["y"], axis=1)
+            y = df["y"]
+            y_pred = self._models[delay].predict(x=x)
+            binary_y_true = NextWaveManager.y_classify_function(y=y)
+            binary_y_pred = NextWaveManager.y_classify_function(y=y_pred)
+            answer = {metric_name: metric_func(binary_y_true, binary_y_pred)
+                      for metric_name, metric_func in
+                      {"accuracy_score": accuracy_score,
+                       "count_event_hit": count_event_hit,
+                       "recall_score": recall_score,
+                       "precision_score": precision_score}.items()}
+            answer["binary_y_true"] = list(binary_y_true)
+            answer["binary_y_pred"] = list(binary_y_pred)
+            with open(os.path.join(os.path.dirname(os.path.dirname(__file__)), "results", "eval_wave_event.json"), "w") as eval_answer_file:
+                json.dump(answer,
+                          eval_answer_file,
+                          indent=2)
 
     @staticmethod
     def y_classify_function(y: pd.Series):
         """
         This function defines what is considered an event given a single signal
         """
-        answer = [1 if y.iloc[index+1] > y.iloc[index] else 0 for index in range(len(y)-1)]
-        answer.append(0)
+        WINDOW = 4
+        answer = []
+        y = list(y)
+        for i in range(len(y) - WINDOW):
+            pass_test = True
+            last_delta = 0
+            for j in range(WINDOW - 1):
+                new_delta = y[i + j + 1] - y[i + j]
+                if new_delta < 0 or last_delta > new_delta:
+                    pass_test = False
+                    break
+                last_delta = new_delta
+            answer.append(1 if pass_test else 0)
+        [answer.append(0) for _ in range(WINDOW)]
         return pd.Series(answer)

@@ -32,8 +32,8 @@ class NextWavePredictor:
         """
         Fit the model on the data
         """
-        model = XGBRegressor(objective='reg:squarederror')
-        scores = cross_val_score(model,
+        self._model = XGBRegressor(objective='reg:squarederror')
+        scores = cross_val_score(self._model,
                                  x_train,
                                  y_train,
                                  cv=RepeatedKFold(n_splits=5,
@@ -46,8 +46,8 @@ class NextWavePredictor:
         print("NextWavePredictor.fit: mean = {:.3f}, std = {:.3f}".format(np.nanmean(scores),
                                                                           np.nanstd(scores)))
         # train on all the train data
-        self._model = model.fit(x_train,
-                                y_train)
+        self._model.fit(x_train,
+                        y_train)
 
     def predict(self,
                 x: pd.DataFrame):

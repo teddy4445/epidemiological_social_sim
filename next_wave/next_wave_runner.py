@@ -39,6 +39,7 @@ class NextWaveRunner:
         model_wrapper = NextWaveManager()
         model_wrapper.load_data(path_or_df=signals)
         model_wrapper.fit()
+        model_wrapper.eval()
 
 
 if __name__ == '__main__':
