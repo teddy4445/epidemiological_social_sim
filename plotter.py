@@ -4,6 +4,8 @@ import pandas as pd
 import seaborn as sns
 import networkx as nx
 import matplotlib.pyplot as plt
+from sklearn.metrics import roc_curve, auc
+from sklearn.preprocessing import label_binarize
 
 # project imports
 from epidemiological_simulator.graph import Graph
@@ -22,6 +24,41 @@ class Plotter:
 
     def __init__(self):
         pass
+
+    @staticmethod
+    def model_roc(y_true: list,
+                  y_pred: list,
+                  save_path: str):
+        y_true = label_binarize(y_true, classes=list(set(y_true)))
+        y_pred = label_binarize(y_pred, classes=list(set(y_pred)))
+        n_classes = y_true.shape[1]
+        fpr = dict()
+        tpr = dict()
+        roc_auc = dict()
+        for i in range(n_classes):
+            fpr[i], tpr[i], _ = roc_curve(y_true[:, i], y_pred[:, i])
+            roc_auc[i] = auc(fpr[i], tpr[i])
+
+        # Compute micro-average ROC curve and ROC area
+        fpr["micro"], tpr["micro"], _ = roc_curve(y_true.ravel(), y_pred.ravel())
+        roc_auc["micro"] = auc(fpr["micro"], tpr["micro"])
+        # plot
+        lw = 2
+        plt.plot(
+            fpr["micro"],
+            tpr["micro"],
+            color="darkorange",
+            lw=lw,
+            label="AUC = {:.3f})".format(roc_auc["micro"]),
+        )
+        plt.plot([0, 1], [0, 1], color="navy", lw=lw, linestyle="--")
+        plt.xlim([0.0, 1.0])
+        plt.ylim([0.0, 1.0])
+        plt.xlabel("False Positive Rate")
+        plt.ylabel("True Positive Rate")
+        plt.legend(loc="lower right")
+        plt.savefig(save_path, dpi=600)
+        plt.close()
 
     @staticmethod
     def plot_wave_signal(x: pd.DataFrame,

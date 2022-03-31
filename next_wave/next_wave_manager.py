@@ -10,21 +10,6 @@ from plotter import Plotter
 from next_wave.next_wave_predictor import NextWavePredictor
 
 
-def count_event_hit(y_true, y_pred):
-    """
-    Count the number of time y_true == y_pred == 1 out of y_true == 1
-    """
-    assert len(y_pred) == len(y_true)
-    count = 0
-    hit_count = 0
-    for i in range(len(y_true)):
-        if y_true[i] == 1:
-            count += 1
-            if y_true[i] == y_pred[i]:
-                hit_count += 1
-    return hit_count/count
-
-
 class NextWaveManager:
     """
     A class responsible to the next wave models tranining, analysis, saving results and integrate with other processes in
@@ -126,15 +111,18 @@ class NextWaveManager:
             answer = {metric_name: metric_func(binary_y_true, binary_y_pred)
                       for metric_name, metric_func in
                       {"accuracy_score": accuracy_score,
-                       "count_event_hit": count_event_hit,
                        "recall_score": recall_score,
                        "precision_score": precision_score}.items()}
             answer["binary_y_true"] = list(binary_y_true)
             answer["binary_y_pred"] = list(binary_y_pred)
-            with open(os.path.join(os.path.dirname(os.path.dirname(__file__)), "results", "eval_wave_event.json"), "w") as eval_answer_file:
+            with open(os.path.join(os.path.dirname(os.path.dirname(__file__)), "results", "eval_wave_event_delay_{}.json".format(delay)), "w") as eval_answer_file:
                 json.dump(answer,
                           eval_answer_file,
                           indent=2)
+            # plot ROC
+            Plotter.model_roc(y_true=list(binary_y_true),
+                              y_pred=list(binary_y_pred),
+                              save_path=os.path.join(os.path.dirname(os.path.dirname(__file__)), "results", "roc_next_wave_model_delay_{}.png".format(delay)))
 
     @staticmethod
     def y_classify_function(y: pd.Series):
