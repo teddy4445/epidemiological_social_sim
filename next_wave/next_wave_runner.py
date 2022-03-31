@@ -3,7 +3,7 @@ import os
 import json
 
 # project imports
-from next_wave.next_wave import NextWave
+from next_wave.next_wave_manager import NextWaveManager
 from next_wave.prepare_signal_data_from_covid_and_twitter import PrepareSignals
 
 
@@ -26,12 +26,17 @@ class NextWaveRunner:
         else:
             signals_prepare = PrepareSignals().load()
         # load cluster data
-        with open(os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "clusters_words.json"), "r") as cluster_data_file:
-            word_clusters_in_signals = json.load(cluster_data_file)
+        cluster_words_file_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "word_clusters.json")
+        try:
+            with open(cluster_words_file_path, "r") as cluster_data_file:
+                word_clusters_in_signals = json.load(cluster_data_file)
+        except:
+            word_clusters_in_signals = PrepareSignals().get_clusters_words_from_file(save_path=cluster_words_file_path,
+                                                                                     top_k=1000)
         # prepare signal data
         signals = signals_prepare.convert_to_signals(word_clusters_in_signals=word_clusters_in_signals)
         # use signal data for model training
-        model_wrapper = NextWave()
+        model_wrapper = NextWaveManager()
         model_wrapper.load_data(path_or_df=signals)
         model_wrapper.fit()
 

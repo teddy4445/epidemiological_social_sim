@@ -27,35 +27,38 @@ class Plotter:
     def plot_wave_signal(x: pd.DataFrame,
                          y_signal: pd.Series,
                          binary_y_signal: pd.Series,
-                         save_path: str):
+                         save_path: str,
+                         smooth: bool = False):
         """
         Plot the data used to train the 'next wave' model
         """
         plt.figure()
         # the x-signals
         [plt.plot(range(len(list(x[col]))),
-                  x[col],
-                  "-{}".format(Plotter.STYLES[index][-1]),
+                  x[col] if not smooth else Plotter._smooth(signal=x[col]),
+                  "-".format(Plotter.STYLES[index][-1]),
                   linewidth=1,
                   color=Plotter.COLORS[index],
-                  label="X-{}".format(col))
+                  label="X-{}".format(col.replace("_", " ")))
          for index, col in enumerate(list(x))]
         # the y signal
+        y_signal = y_signal if not smooth else Plotter._smooth(signal=y_signal)
         plt.plot(range(len(list(y_signal))),
                  y_signal,
                  "--",
-                 linewidth=2,
+                 linewidth=1,
                  color="black",
                  label="Y")
         # the y signal after extraction of the events
         plt.scatter([index for index, val in enumerate(binary_y_signal) if val == 1],
-                    [y[index] for index, val in enumerate(binary_y_signal) if val == 1],
-                    "o",
-                    color="black",
+                    [y_signal[index] for index, val in enumerate(binary_y_signal) if val == 1],
+                    s=3,
+                    color="gray",
                     label="Events")
         plt.legend(loc="best")
         plt.xlabel('Time [days]')
-        plt.ylabel('Signals')
+        plt.ylabel("Signals (Z-score)")
+        plt.xlim((0, len(x)))
         plt.grid(alpha=0.1,
                  color="black")
         plt.tight_layout()
@@ -234,3 +237,12 @@ class Plotter:
         plt.ylabel(ylabel, fontsize=16)
         plt.savefig(save_path, dpi=Plotter.DPI)
         plt.close()
+
+    @staticmethod
+    def _smooth(signal,
+                window_size: int = 7):
+        signal = pd.Series(signal)
+        windows = signal.rolling(window_size)
+        signal = windows.mean()
+        signal = signal.fillna(0)
+        return signal

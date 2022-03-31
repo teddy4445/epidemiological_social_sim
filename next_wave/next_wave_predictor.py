@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import scipy.stats as stats
 from xgboost import XGBRegressor
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, mean_absolute_error
 from sklearn.model_selection import RepeatedKFold
 from sklearn.model_selection import cross_val_score
 
@@ -18,7 +18,7 @@ class NextWavePredictor:
 
     # CONSTS #
     Y_COL_NAME = ""
-    DATE_COL_NAME = ""
+    DATE_COL_NAME = "date"
     # END - CONSTS #
 
     def __init__(self,
@@ -32,13 +32,6 @@ class NextWavePredictor:
         """
         Fit the model on the data
         """
-        df = x_train.copy()
-        df["y_delayed"] = y_train
-        df = NextWavePredictor.series_to_supervised(df=df,
-                                                    n_in=14,
-                                                    n_out=self._prediction_delay,
-                                                    dropnan=True)
-        x_train, y_train = df.drop(["y"], axis=1), df["y"]
         model = XGBRegressor(objective='reg:squarederror')
         scores = cross_val_score(model,
                                  x_train,
@@ -46,7 +39,7 @@ class NextWavePredictor:
                                  cv=RepeatedKFold(n_splits=5,
                                                   n_repeats=3,
                                                   random_state=73),
-                                 scoring='mean_squared_error',
+                                 scoring='neg_mean_absolute_error',
                                  verbose=1)
         # let the user know about the performance
         scores = [abs(val) for val in scores]
@@ -72,7 +65,7 @@ class NextWavePredictor:
         If not 'metric' function is provided, we would use 'accuracy'
         """
         if metric is None:
-            metric = accuracy_score
+            metric = mean_absolute_error
         return metric(y_true=y_test,
                       y_pred=self.predict(x=x_test))
 
@@ -113,10 +106,10 @@ class NextWavePredictor:
         cols, names = list(), list()
         # input sequence (t-n, ... t-1)
         for i in range(n_in, -1, -1):
-            cols.append(df.shift(i))
-            names += ['{}(t-{})'.format(var_names[j], i) for j in range(n_vars)]
+            cols.append(df.shift(i) if i < 0 else df.shift(i).drop([var_names[-1]], axis=1))
+            names += ['{}(t-{})'.format(var_names[j], i) for j in range(n_vars if i < 0 else n_vars-1)]
         # forecast var
-        cols.append(df.shift(-n_out))
+        cols.append(df.shift(-n_out)[var_names[-1]])
         names += "y"
         # put it all together
         agg = pd.concat(cols, axis=1)

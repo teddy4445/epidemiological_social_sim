@@ -18,6 +18,7 @@ class PrepareSignals:
     # CONSTS #
     DEFAULT_TWITTER_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "clean_tweets.csv")
     DEFAULT_WHO_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "covid_us.csv")
+    CLUSTER_WORDS_FILE_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "word_clusters.csv")
 
     TWITTER_COLS_DROP = ["name", "location", "retweets", "Time", "week", "followers", "like", "day", "month", "year", "year_week",
                          "year_month"]
@@ -31,6 +32,7 @@ class PrepareSignals:
     FIXED_DEFAULT_TWITTER_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "results", "fixed_clean_tweets.csv")
     FIXED_DEFAULT_WHO_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "results", "fixed_covid_us.csv")
     FINAL_RAW_FILE_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "results", "raw_signal_file.csv")
+    FIXED_DEFAULT_CLUSTER_WORDS_FILE_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "results", "word_clusters.json")
 
     Y_COL_NAME = "cases"
     WORDS_COL_NAME = "words"
@@ -88,6 +90,32 @@ class PrepareSignals:
         print("PrepareSignals.load_final: Loading data")
         self._df = pd.read_csv(final_file_path if final_file_path != "" else PrepareSignals.FINAL_RAW_FILE_PATH)
         return self
+
+    def get_clusters_words_from_file(self,
+                                     cluster_words_file_path: str = "",
+                                     save_path: str = "",
+                                     top_k: int = 100):
+        """
+        This function responsible to compute a list of words in each cluster-signal from a given file pre-comptued for us
+        The 'save_path' will save the results to a file in the given path and not if not provided.
+        The 'top_k' will retrieve only the given value from the most used words and all words in equals to (-1 or 0)
+        """
+        print("PrepareSignals.get_clusters_words_from_file: Loading data")
+        raw_cluster_df = pd.read_csv(cluster_words_file_path if cluster_words_file_path != "" else PrepareSignals.CLUSTER_WORDS_FILE_PATH)
+        clusters_df = raw_cluster_df.groupby("assigned_cluster")
+        # if needed, trim the top somthing
+        if top_k > 0:
+            print("PrepareSignals.get_clusters_words_from_file: Filter to top k={}".format(top_k))
+            clusters_df = clusters_df.apply(lambda x: x.nlargest(top_k, ['freq'])).reset_index(drop=True)
+            clusters_df.drop(["freq"], axis=1, inplace=True)
+            clusters_df = clusters_df.groupby("assigned_cluster")
+        signals = [signal.split(",") for signal in list(clusters_df["word"].apply(lambda x: ','.join(x)))]
+        # if needed, save results
+        if save_path != "":
+            print("PrepareSignals.get_clusters_words_from_file: saving results to: {}".format(save_path))
+            with open(save_path, "w") as signals_words_file:
+                json.dump(signals, signals_words_file, indent=2)
+        return signals
 
     def convert_to_signals(self,
                            word_clusters_in_signals: list,
