@@ -1,10 +1,5 @@
 # Epidemiological-social graph-based simulation
 
-## Abstract
-
-
-## Optimal PIP algorithm
-
 
 ## Structure
 1. **Main.py** - Entry file to the project, running set of simulation to generate the results shown in the paper.
