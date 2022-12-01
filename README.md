@@ -15,6 +15,21 @@
 11. **math_utils.py** - pre-compiled computational funcions.
 12. **vaccine_reduction.py** - the infection factor reduction due to vaccine reduction. 
 
+## How to cite
+Please cite the the paper assosited to this work if you use it in any academic paper:
+```
+@article{lazebnik2022,
+  title={Early Detection and Control of the Next Epidemic Wave Using Health Communications: Development of an Artificial Intelligence-Based Tool and Its Validation on COVID-19 Data from the US},
+  author={Lazebnik, T. and Bunimovich-Mendrazitsky, S. and Ashkenazi, S. and Levner, E. and Benis, A.},
+  journal={Int. J. Environ. Res. Public Health },
+  year={2022},
+  volume = {19},
+  number = {23},
+  pages = {16023},
+  doi = {10.3390/ijerph192316023}
+}
+```
+
 ## Prerequisites
 - Python          3.7
 - numpy           1.20.2
